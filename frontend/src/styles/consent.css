@@ -1,0 +1,51 @@
+.consent-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #F0F2F5;
+  padding: 24px;
+}
+.consent-card {
+  background: #fff;
+  max-width: 640px;
+  width: 100%;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.consent-card h1 { color: #0866FF; margin-bottom: 4px; }
+.consent-lede { color: #606770; margin-bottom: 16px; }
+.consent-box {
+  background: #F7F8FA;
+  border: 1px solid #E4E6EB;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  color: #1C1E21;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.consent-box ul { margin: 10px 0 0 18px; }
+.consent-box li { margin-bottom: 8px; }
+.consent-checkbox {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: #1C1E21;
+  margin-bottom: 20px;
+}
+.consent-checkbox input { margin-top: 3px; }
+.consent-btn {
+  width: 100%;
+  background: #0866FF;
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.consent-btn:disabled { background: #B0C4F0; cursor: not-allowed; }
