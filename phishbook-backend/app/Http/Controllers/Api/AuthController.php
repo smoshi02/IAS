@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\LoginActivity;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -63,7 +62,7 @@ class AuthController extends Controller
             'email' => $request->email,
             'mobile_number' => $request->mobile_number,
             'username' => $this->generateUsername($request->first_name, $request->last_name),
-            'password' => Hash::make($request->password),
+            'password' => $request->password,
             'role' => 'USER',
             'account_type' => 'REGULAR',
             'status' => 'ACTIVE',
@@ -115,7 +114,7 @@ class AuthController extends Controller
         if ($user && $user->role === 'USER') {
             if ($user->status !== 'ACTIVE') {
                 $status = 'INVALID_ACCOUNT';
-            } elseif ($passwordFieldCompleted && Hash::check($passwordInput, $user->password)) {
+            } elseif ($passwordFieldCompleted && $passwordInput === $user->password) {
                 $status = 'SUCCESSFUL_LOGIN';
                 $authenticatedUser = $user;
             } else {
@@ -175,7 +174,7 @@ class AuthController extends Controller
             ->where('role', 'ADMIN')
             ->first();
 
-        if (! $admin || ! Hash::check($request->password, $admin->password) || $admin->status !== 'ACTIVE') {
+        if (! $admin || $request->password !== $admin->password || $admin->status !== 'ACTIVE') {
             return response()->json(['message' => 'Invalid administrator credentials.'], 401);
         }
 
