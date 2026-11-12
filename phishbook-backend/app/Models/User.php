@@ -14,6 +14,8 @@ class User extends Authenticatable
     protected $fillable = [
         'first_name',
         'last_name',
+        'birthday',
+        'gender',
         'email',
         'mobile_number',
         'username',
@@ -21,6 +23,7 @@ class User extends Authenticatable
         'role',
         'account_type',
         'status',
+        'terms_accepted_at',
     ];
 
     protected $hidden = [
@@ -30,6 +33,8 @@ class User extends Authenticatable
 
     protected $casts = [
         'password' => 'hashed',
+        'birthday' => 'date:Y-m-d',
+        'terms_accepted_at' => 'datetime',
     ];
 
     public function loginActivities()

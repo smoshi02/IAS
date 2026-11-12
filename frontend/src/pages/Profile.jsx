@@ -23,7 +23,7 @@ export default function Profile() {
         <h2>{fullName}</h2>
         <p className="muted">@{user?.username}</p>
         <div className="profile-info">
-          <p><strong>Email:</strong> {user?.email}</p>
+          <p><strong>{user?.email ? 'Email' : 'Mobile'}:</strong> {user?.email || user?.mobile_number}</p>
           <p><strong>Mobile:</strong> {user?.mobile_number || '—'}</p>
           <p><strong>Account status:</strong> {user?.status}</p>
         </div>

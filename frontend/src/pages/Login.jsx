@@ -2,13 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { IconLogoMark, IconMail, IconLock, IconEye, IconEyeOff } from '../components/Icons';
-import '../styles/auth.css';
+import { IconLogoMark, IconEye, IconEyeOff } from '../components/Icons';
+import '../styles/login.css';
+
+const LANGUAGES = ['English (US)', 'Filipino', 'Bisaya', 'Español', '日本語', '한국어', '中文(简体)'];
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(() => {
+    try { return localStorage.getItem('phishbook_remembered_identifier') || ''; } catch (e) { return ''; }
+  });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -36,82 +40,90 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-body">
-        <div className="auth-left">
-          <div className="collage">
-            <div className="collage-tile t1">
+    <div className="lg-page">
+      <div className="lg-main">
+        <div className="lg-left">
+          <div className="lg-logo"><IconLogoMark /> PHISHBOOK</div>
+
+          <div className="lg-collage" aria-hidden="true">
+            <div className="lg-tile a">
               <img src="https://picsum.photos/seed/phishbook-a/400/400" alt="" />
             </div>
-            <div className="collage-tile t2">
-              <img src="https://picsum.photos/seed/phishbook-b/260/260" alt="" />
+            <div className="lg-tile b">
+              <img src="https://picsum.photos/seed/phishbook-b/260/340" alt="" />
             </div>
-            <div className="collage-tile t3">
+            <div className="lg-tile c">
               <img src="https://picsum.photos/seed/phishbook-c/220/220" alt="" />
             </div>
-            <div className="collage-caption">
-              <div className="brand-row"><IconLogoMark /> PHISHBOOK</div>
-              <p>A space for classmates to connect and share — built for this academic demo environment.</p>
-            </div>
+            <span className="lg-badge">Academic demo</span>
           </div>
+
+          <h2 className="lg-tagline">
+            Connect with <span className="accent">your classmates</span>.
+          </h2>
         </div>
 
-        <div className="auth-right">
-          <form className="auth-card" onSubmit={handleSubmit}>
-            <div className="auth-card-header">
-              <h2>Welcome back</h2>
-              <p>Log in to continue to your account</p>
-            </div>
+        <div className="lg-right">
+          <form className="lg-card" onSubmit={handleSubmit}>
+            <h1>Log into PHISHBOOK</h1>
 
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="lg-error" role="alert">{error}</div>}
 
-            <div className="input-group">
-              <IconMail />
+            <input
+              className="lg-field"
+              type="text"
+              placeholder="Email, mobile number or username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              autoComplete="username"
+              required
+            />
+
+            <div className="lg-password-wrap">
               <input
-                type="text"
-                placeholder="Email or Phone"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="input-group password-field">
-              <IconLock />
-              <input
+                className="lg-field"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
               />
-              <button type="button" className="toggle-visibility" onClick={() => setShowPassword((v) => !v)} aria-label="Toggle password visibility">
+              <button
+                type="button"
+                className="lg-eye"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
                 {showPassword ? <IconEyeOff /> : <IconEye />}
               </button>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? 'Logging in...' : 'Log In'}
+            <button type="submit" className="lg-btn-primary" disabled={loading}>
+              {loading ? 'Logging in...' : 'Log in'}
             </button>
 
-            <Link to="#" className="forgot-link">Forgot Password?</Link>
+            <Link to="#" className="lg-forgot">Forgot password?</Link>
 
-            <hr />
+            <hr className="lg-divider" />
 
-            <Link to="/register" className="btn-secondary">Create New Account</Link>
+            <Link to="/register" className="lg-btn-secondary">Create new account</Link>
+
+            <div className="lg-brandmark"><IconLogoMark /> PHISHBOOK</div>
           </form>
         </div>
       </div>
 
-      <footer className="auth-footer">
-        <span>PHISHBOOK Demo</span>
+      <footer className="lg-footer">
+        {LANGUAGES.map((lang, i) => (
+          <React.Fragment key={lang}>
+            {i > 0 && <span className="sep">·</span>}
+            <button type="button">{lang}</button>
+          </React.Fragment>
+        ))}
         <span className="sep">·</span>
-        <a href="#">About</a>
-        <a href="#">Help</a>
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <span className="sep">·</span>
-        <span>© 2026 Academic Project</span>
+        <button type="button">More languages…</button>
+        <span className="lg-copyright">PHISHBOOK Academic Demo · © 2026</span>
       </footer>
     </div>
   );

@@ -54,7 +54,7 @@ export default function UserManagement() {
           {users.map((u) => (
             <tr key={u.id}>
               <td>{u.id}</td><td>{u.first_name}</td><td>{u.last_name}</td>
-              <td>{u.email}</td><td>{u.username}</td>
+              <td>{u.email || u.mobile_number || '—'}</td><td>{u.username}</td>
               <td>{new Date(u.created_at).toLocaleDateString()}</td>
               <td><span className={`badge ${u.status.toLowerCase()}`}>{u.status}</span></td>
               <td>

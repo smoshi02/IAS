@@ -78,3 +78,9 @@ export const IconLogoMark = (p) => (
     </defs>
   </svg>
 );
+export const IconArrowLeft = (p) => (
+  <svg {...base} {...p}><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
+);
+export const IconCheck = (p) => (
+  <svg {...base} {...p}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+);
