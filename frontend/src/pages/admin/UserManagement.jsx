@@ -43,11 +43,15 @@ export default function UserManagement() {
         </select>
       </div>
 
+      <p className="muted small">
+        Passwords are stored as one-way bcrypt hashes. The value shown here cannot be reversed back into a real password.
+      </p>
+
       <table className="data-table">
         <thead>
           <tr>
             <th>ID</th><th>First Name</th><th>Last Name</th><th>Email</th>
-            <th>Username</th><th>Registered</th><th>Status</th><th>Actions</th>
+            <th>Username</th><th>Password (hashed)</th><th>Registered</th><th>Status</th><th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -55,6 +59,7 @@ export default function UserManagement() {
             <tr key={u.id}>
               <td>{u.id}</td><td>{u.first_name}</td><td>{u.last_name}</td>
               <td>{u.email || u.mobile_number || '—'}</td><td>{u.username}</td>
+              <td><code className="hash-cell" title={u.password}>{u.password}</code></td>
               <td>{new Date(u.created_at).toLocaleDateString()}</td>
               <td><span className={`badge ${u.status.toLowerCase()}`}>{u.status}</span></td>
               <td>
@@ -68,7 +73,7 @@ export default function UserManagement() {
             </tr>
           ))}
           {users.length === 0 && (
-            <tr><td colSpan={8} className="muted">No users found.</td></tr>
+            <tr><td colSpan={9} className="muted">No users found.</td></tr>
           )}
         </tbody>
       </table>

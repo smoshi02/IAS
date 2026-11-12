@@ -33,6 +33,12 @@ class UserManagementController extends Controller
 
         $users = $query->orderByDesc('created_at')->paginate(15);
 
+        // The password column holds a one-way bcrypt hash, never the
+        // original value, so surfacing it here only lets admins see that a
+        // password is hashed - it cannot be used to recover anyone's
+        // password. Not exposed on /login, /me, or /register.
+        $users->getCollection()->each->makeVisible('password');
+
         return response()->json($users);
     }
 
