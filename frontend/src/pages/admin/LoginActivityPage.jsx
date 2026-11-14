@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../api/axios';
 
 const statuses = ['SUCCESSFUL_LOGIN', 'FAILED_LOGIN', 'INVALID_ACCOUNT', 'UNREGISTERED_USER'];
@@ -10,22 +10,32 @@ export default function LoginActivityPage() {
   const [date, setDate] = useState('');
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
+  const [error, setError] = useState('');
 
-  const load = () => {
-    api.get('/admin/login-activities', { params: { search, status, date, page } }).then((res) => {
-      setActivities(res.data.data || []);
-      setLastPage(res.data.last_page || 1);
-    });
-  };
+  const load = useCallback(() => {
+    let cancelled = false;
+    api.get('/admin/login-activities', { params: { search, status, date, page } })
+      .then((res) => {
+        if (cancelled) return;
+        setActivities(res.data.data || []);
+        setLastPage(res.data.last_page || 1);
+        setError('');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.response?.status === 401) return; // the axios interceptor is already redirecting
+        setError('Could not load login activity. Check that the API is running.');
+      });
+    return () => { cancelled = true; };
+  }, [search, status, date, page]);
 
-  useEffect(load, [search, status, date, page]);
+  useEffect(() => load(), [load]);
 
   // Auto-refresh every 15s so admins see new attempts without reloading.
   useEffect(() => {
     const id = setInterval(load, 15000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, date, page]);
+  }, [load]);
 
   const exportCsv = () => {
     const params = new URLSearchParams();
@@ -36,14 +46,19 @@ export default function LoginActivityPage() {
     fetch(`${base}/admin/login-activities/export-csv?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((res) => res.blob())
+      .then((res) => {
+        if (!res.ok) throw new Error(`Export failed (${res.status})`);
+        return res.blob();
+      })
       .then((blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'login_activities.csv';
         a.click();
-      });
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(() => setError('Could not export the CSV. Check that the API is running.'));
   };
 
   return (
@@ -58,6 +73,8 @@ export default function LoginActivityPage() {
         <input type="date" value={date} onChange={(e) => { setPage(1); setDate(e.target.value); }} />
         <button onClick={exportCsv}>Export CSV</button>
       </div>
+
+      {error && <div className="auth-error" style={{ marginTop: 16 }}>{error}</div>}
 
       <table className="data-table">
         <thead>

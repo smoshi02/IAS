@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { IconLogoMark, IconEye, IconEyeOff } from '../components/Icons';
+import { IconLogoMark, IconEye, IconEyeOff, IconHeartFilled, IconStarFilled, IconStoreFilled, IconClock } from '../components/Icons';
 import '../styles/login.css';
 
 const LANGUAGES = ['English (US)', 'Filipino', 'Bisaya', 'Español', '日本語', '한국어', '中文(简体)'];
@@ -46,16 +46,38 @@ export default function Login() {
           <div className="lg-logo"><IconLogoMark /> PHISHBOOK</div>
 
           <div className="lg-collage" aria-hidden="true">
+            {/* Card 1 — simple photo card with a small corner icon */}
             <div className="lg-tile a">
+              <span className="lg-tile-icon"><IconStoreFilled /></span>
               <img src="https://picsum.photos/seed/phishbook-a/400/400" alt="" />
             </div>
+
+            {/* Card 2 — tall "story" card: progress bar, duration chip, scrubber + dots */}
             <div className="lg-tile b">
-              <img src="https://picsum.photos/seed/phishbook-b/260/340" alt="" />
+              <div className="lg-story-progress"><span /></div>
+              <span className="lg-chip"><IconClock width={13} height={13} />16:45</span>
+              <img src="https://picsum.photos/seed/phishbook-b/360/640" alt="" />
+              <div className="lg-story-footer">
+                <span className="lg-story-scrubber" />
+                <span className="lg-story-dots"><i className="on" /><i /></span>
+              </div>
             </div>
+
+            {/* Card 3 — post card: photo up top, caption lines below */}
             <div className="lg-tile c">
-              <img src="https://picsum.photos/seed/phishbook-c/220/220" alt="" />
+              <span className="lg-tile-icon"><IconStarFilled /></span>
+              <div className="lg-tile-photo">
+                <img src="https://picsum.photos/seed/phishbook-c/260/200" alt="" />
+              </div>
+              <div className="lg-tile-lines"><span /><span /></div>
             </div>
-            <span className="lg-badge">Academic demo</span>
+
+            {/* Floating stickers */}
+            <span className="lg-sticker lg-sticker-emoji" role="img" aria-label="">🙂</span>
+            <span className="lg-sticker lg-sticker-heart"><IconHeartFilled /></span>
+            <span className="lg-sticker lg-sticker-avatar">
+              <img src="https://picsum.photos/seed/phishbook-avatar/160/160" alt="" />
+            </span>
           </div>
 
           <h2 className="lg-tagline">

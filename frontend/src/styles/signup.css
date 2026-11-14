@@ -322,3 +322,47 @@
   .su-row { grid-template-columns: 1fr; }
   .su-intro h1 { font-size: 24px; }
 }
+/* ------------------------------------------------------------------
+   Single-page layout (all sections shown together, no step wizard).
+------------------------------------------------------------------- */
+.su-shell-single {
+  max-width: 560px;
+  min-height: 0;
+}
+.su-shell-single .su-header { grid-template-columns: 44px 1fr 44px; }
+
+.su-onepage {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding: 10px 28px 8px;
+}
+.su-onepage .su-intro h1 { font-size: 26px; }
+
+.su-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--su-line);
+}
+.su-onepage > .su-note + .su-section:first-of-type,
+.su-onepage > .su-banner + .su-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.su-section:first-of-type { border-top: none; padding-top: 0; }
+.su-section-head h2 { margin: 0 0 2px; font-size: 15px; font-weight: 700; color: var(--su-ink); }
+.su-section-head p { margin: 0; font-size: 13px; color: var(--su-muted); }
+
+.su-contact-switch { align-self: flex-start; font-weight: 600; }
+
+.su-terms-check.has-error .box { border-color: var(--su-danger); }
+
+@media (max-width: 560px) {
+  .su-shell-single { max-width: none; }
+}
+@media (min-width: 561px) {
+  .su-page { align-items: flex-start; }
+  .su-shell-single { margin: 32px auto; max-height: none; }
+}

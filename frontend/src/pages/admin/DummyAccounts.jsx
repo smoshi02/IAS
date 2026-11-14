@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../../api/axios';
 
 export default function DummyAccounts() {
@@ -7,14 +7,25 @@ export default function DummyAccounts() {
   const [status, setStatus] = useState('');
   const [form, setForm] = useState({ first_name: '', last_name: '', test_username: '', predefined_test_password: '' });
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
-  const load = () => {
-    api.get('/admin/dummy-accounts', { params: { search, status } }).then((res) => {
-      setAccounts(res.data.data || []);
-    });
-  };
+  const load = useCallback(() => {
+    let cancelled = false;
+    api.get('/admin/dummy-accounts', { params: { search, status } })
+      .then((res) => {
+        if (cancelled) return;
+        setAccounts(res.data.data || []);
+        setLoadError('');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.response?.status === 401) return; // the axios interceptor is already redirecting
+        setLoadError('Could not load dummy accounts. Check that the API is running.');
+      });
+    return () => { cancelled = true; };
+  }, [search, status]);
 
-  useEffect(load, [search, status]);
+  useEffect(() => load(), [load]);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -32,8 +43,12 @@ export default function DummyAccounts() {
 
   const toggleStatus = async (acc) => {
     const newStatus = acc.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    await api.patch(`/admin/dummy-accounts/${acc.id}/status`, { status: newStatus });
-    load();
+    try {
+      await api.patch(`/admin/dummy-accounts/${acc.id}/status`, { status: newStatus });
+      load();
+    } catch (err) {
+      setError('Could not update that account. Please try again.');
+    }
   };
 
   return (
@@ -52,6 +67,7 @@ export default function DummyAccounts() {
         <button type="submit" className="btn-primary">Generate</button>
       </form>
       {error && <div className="auth-error">{error}</div>}
+      {loadError && <div className="auth-error">{loadError}</div>}
 
       <div className="toolbar">
         <input placeholder="Search username..." value={search} onChange={(e) => setSearch(e.target.value)} />

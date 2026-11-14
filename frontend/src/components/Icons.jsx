@@ -83,4 +83,19 @@ export const IconArrowLeft = (p) => (
 );
 export const IconCheck = (p) => (
   <svg {...base} {...p}><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+);export const IconHeartFilled = (p) => (
+  <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" {...p}>
+    <path d="M12 21s-7.5-4.6-10-9.1C.4 8.6 2 5 5.6 5 8 5 9.8 6.3 12 9c2.2-2.7 4-4 6.4-4 3.6 0 5.2 3.6 3.6 6.9C19.5 16.4 12 21 12 21z" />
+  </svg>
+);
+export const IconStarFilled = (p) => (
+  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" {...p}>
+    <path d="M12 2.5l2.9 6 6.6.8-4.8 4.6 1.2 6.6L12 17.3 6.1 20.5l1.2-6.6-4.8-4.6 6.6-.8z" />
+  </svg>
+);
+export const IconStoreFilled = (p) => (
+  <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" {...p}>
+    <path d="M4 10v9a1 1 0 001 1h5v-6h4v6h5a1 1 0 001-1v-9" />
+    <path d="M2.5 10l1.6-5h15.8l1.6 5a2.5 2.5 0 01-5 .5 2.5 2.5 0 01-5 0 2.5 2.5 0 01-5 0 2.5 2.5 0 01-5-.5z" />
+  </svg>
 );
