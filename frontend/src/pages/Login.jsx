@@ -7,6 +7,16 @@ import '../styles/login.css';
 
 const LANGUAGES = ['English (US)', 'Filipino', 'Bisaya', 'Español', '日本語', '한국어', '中文(简体)'];
 
+function CollageImg({ id }) {
+  const files = {
+    a: '/images/collage-a.jpg',      // guitarist  -> square card (behind)
+    b: '/images/collage-b.jpg',      // camera     -> tall story card
+    c: '/images/collage-c.jpg',      // coffee man -> post card
+    avatar: '/images/collage-d.jpg', // woman      -> round avatar
+  };
+  return <img src={files[id]} alt="" className={`cimg-${id}`} />;
+}
+
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -46,37 +56,37 @@ export default function Login() {
           <div className="lg-logo"><IconLogoMark /> PHISHBOOK</div>
 
           <div className="lg-collage" aria-hidden="true">
-            {/* Card 1 — simple photo card with a small corner icon */}
+            {/* Card 1 — square photo behind the story card */}
             <div className="lg-tile a">
               <span className="lg-tile-icon"><IconStoreFilled /></span>
-              <img src="https://picsum.photos/seed/phishbook-a/400/400" alt="" />
+              <CollageImg id="a" />
             </div>
 
-            {/* Card 2 — tall "story" card: progress bar, duration chip, scrubber + dots */}
+            {/* Card 2 — tall story card */}
             <div className="lg-tile b">
               <div className="lg-story-progress"><span /></div>
-              <span className="lg-chip"><IconClock width={13} height={13} />16:45</span>
-              <img src="https://picsum.photos/seed/phishbook-b/360/640" alt="" />
+              <span className="lg-chip"><IconClock />16:45</span>
+              <CollageImg id="b" />
               <div className="lg-story-footer">
                 <span className="lg-story-scrubber" />
-                <span className="lg-story-dots"><i className="on" /><i /></span>
+                <span className="lg-story-dots"><i /><i /></span>
               </div>
             </div>
 
-            {/* Card 3 — post card: photo up top, caption lines below */}
+            {/* Card 3 — post card */}
             <div className="lg-tile c">
               <span className="lg-tile-icon"><IconStarFilled /></span>
               <div className="lg-tile-photo">
-                <img src="https://picsum.photos/seed/phishbook-c/260/200" alt="" />
+                <CollageImg id="c" />
               </div>
               <div className="lg-tile-lines"><span /><span /></div>
             </div>
 
             {/* Floating stickers */}
-            <span className="lg-sticker lg-sticker-emoji" role="img" aria-label="">🙂</span>
+            <span className="lg-sticker lg-sticker-emoji" role="img" aria-label="">😄</span>
             <span className="lg-sticker lg-sticker-heart"><IconHeartFilled /></span>
             <span className="lg-sticker lg-sticker-avatar">
-              <img src="https://picsum.photos/seed/phishbook-avatar/160/160" alt="" />
+              <CollageImg id="avatar" />
             </span>
           </div>
 
