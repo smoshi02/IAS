@@ -71,7 +71,7 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
   font-size: 12px; font-weight: 600; box-shadow: 0 4px 14px rgba(28,63,174,0.18);
   cursor: pointer; position: relative;
 }
-.story-card .story-avatar { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid #fff; background: #fff; }
+.story-card .story-avatar { position: absolute; top: 10px; left: 10px; width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid #fff; background: #fff; }
 .story-card.add { background: #fff; color: #2C6BED; align-items: center; justify-content: center; flex-direction: column; gap: 6px; border: 1.5px dashed #AFC2F2; }
 .story-card.add svg { width: 22px; height: 22px; }
 
@@ -254,3 +254,52 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", He
   .stories-row { grid-template-columns: repeat(2, 1fr); }
   .chat-dock { display: none; }
 }
+/* In-feed sponsored banner (SimAd) */
+.feed-ad { margin-bottom: 16px; }
+
+/* Laptop-style ad notification (bottom-right, sits above the chat dock) */
+.ad-toast {
+  position: fixed; right: 16px; bottom: 16px; z-index: 40;
+  width: 580px; max-width: calc(100vw - 32px);
+  display: flex; gap: 20px; align-items: stretch;
+  padding: 18px 50px 18px 18px;
+  background: #fff;
+  border: 1px solid #E3E6F0;
+  border-radius: 14px;
+  box-shadow: 0 8px 28px rgba(15, 26, 60, 0.22);
+  cursor: pointer;
+  animation: ad-toast-in 0.35s ease;
+}
+.ad-toast:hover { background: #FAFBFF; }
+.ad-toast:focus-visible { outline: 2px solid #2C6BED; outline-offset: 2px; }
+@keyframes ad-toast-in { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.ad-toast-x {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px;
+  border: none; background: none; border-radius: 50%;
+  color: #6B7390; font-size: 28px; line-height: 1; cursor: pointer;
+}
+.ad-toast-x:hover { background: #EEF2FA; color: #0F1A3C; }
+
+.ad-toast-thumb {
+  flex: none; width: 200px; border-radius: 10px; overflow: hidden;
+  background: linear-gradient(150deg, #EE4D2D, #7A1F0C);
+}
+.ad-toast-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.ad-toast-text { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.ad-toast-source { font-size: 14px; color: #8A91AB; }
+.ad-toast-title { font-size: 21px; font-weight: 600; color: #0F1A3C; }
+.ad-toast-body { font-size: 16px; color: #4a4f66; line-height: 1.4; }
+
+@media (prefers-reduced-motion: reduce) { .ad-toast { animation: none; } }
+@media (max-width: 700px) {
+  .ad-toast { right: 12px; bottom: 12px; padding: 12px 38px 12px 12px; gap: 12px; }
+  .ad-toast-thumb { width: 96px; }
+  .ad-toast-title { font-size: 15px; }
+  .ad-toast-body { font-size: 13px; }
+}
+
+/* Keep the chat window above the ad notification */
+.chat-dock { z-index: 45; }

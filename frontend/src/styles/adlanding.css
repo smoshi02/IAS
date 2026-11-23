@@ -1,0 +1,719 @@
+/* ==================================================================
+   Storefront stage (fictional "Shoppa" grid) — every clickable
+   element opens a new tab of this same page (the "waste some time"
+   prank). Orange theme, no real brand assets.
+=================================================================== */
+.shop-page {
+  min-height: 100vh;
+  background: #F5F5F5;
+  color: #222;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  padding-bottom: 80px;
+}
+
+.shop-exit {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 100; /* always above pop-ups */
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.shop-exit:hover { background: rgba(0, 0, 0, 0.85); }
+
+/* ---------- Header ---------- */
+.shop-header {
+  background: linear-gradient(-180deg, #f53d2d, #f63);
+  color: #fff;
+  padding-bottom: 8px;
+}
+
+.shop-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8px 16px 0;
+  font-size: 13px;
+}
+.shop-topbar-left,
+.shop-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.shop-topbar button {
+  background: none;
+  border: none;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.shop-topbar button:hover { opacity: 0.8; }
+.shop-sep { width: 1px; height: 13px; background: rgba(255, 255, 255, 0.45); }
+.shop-social {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  background: #fff;
+  color: #f53d2d;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  margin-left: -6px;
+}
+.shop-notif { position: relative; }
+.shop-notif-badge {
+  background: #fff;
+  color: #ee4d2d;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 999px;
+  margin: 0 4px 6px -4px;
+}
+.shop-account { display: flex; align-items: center; gap: 8px; }
+.shop-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffd1c2, #8a5b4a);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.shop-header-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  max-width: 1200px;
+  margin: 14px auto 0;
+  padding: 0 16px;
+}
+
+.shop-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 500;
+  flex: none;
+  margin-top: 2px;
+}
+.shop-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; height: 48px;
+  background: #fff;
+  color: #ee4d2d;
+  border-radius: 8px 8px 6px 6px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.shop-search-wrap { flex: 1; }
+.shop-search {
+  display: flex;
+  background: #fff;
+  border-radius: 3px;
+  padding: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.shop-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 15px;
+  color: #555;
+  background: transparent;
+  cursor: pointer;
+}
+.shop-search button {
+  border: none;
+  background: #fb5533;
+  color: #fff;
+  width: 66px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 16px;
+}
+.shop-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin-top: 8px;
+}
+.shop-keywords button {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 0;
+  cursor: pointer;
+}
+.shop-keywords button:hover { text-decoration: underline; }
+
+.shop-cart {
+  position: relative;
+  flex: none;
+  font-size: 28px;
+  color: #fff;
+  cursor: pointer;
+  margin: 10px 20px 0 10px;
+}
+.shop-cart-badge {
+  position: absolute;
+  top: -10px; left: 16px;
+  background: #fff;
+  color: #ee4d2d;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid #ee4d2d;
+}
+
+/* ---------- Daily Discover ---------- */
+.shop-discover {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  max-width: 1200px;
+  margin: 40px auto 28px;
+  padding: 0 16px;
+}
+.shop-discover::before {
+  content: '';
+  position: absolute;
+  left: 16px; right: 16px;
+  top: 50%;
+  border-top: 1px dotted #c8c8c8;
+}
+.shop-discover span {
+  position: relative;
+  display: inline-block;
+  background: #ee4d2d;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 16px 28px;
+  border-radius: 8px;
+}
+
+/* ---------- Grid ---------- */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.shop-card {
+  text-align: left;
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 3px;
+  overflow: hidden;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s;
+}
+.shop-card:hover {
+  border-color: #ee4d2d;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.shop-card-media {
+  position: relative;
+  background: #eee;
+  overflow: hidden;
+  aspect-ratio: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-card-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.shop-card-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.55); font-size: 56px; }
+.shop-card-discount {
+  position: absolute;
+  top: 0; right: 0;
+  background: rgba(255, 238, 232, 0.95);
+  color: #ee4d2d;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 6px;
+}
+.shop-card-play {
+  position: absolute;
+  right: 8px; bottom: 38px;
+  width: 26px; height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.shop-card-strip {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: stretch;
+  height: 30px;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 9px;
+  line-height: 1;
+}
+/* Left block: white "PayLater" row over an orange "0% INTEREST" row */
+.shop-strip-pay {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 62px;
+}
+.shop-strip-pay b {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #ee4d2d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+.shop-strip-pay i {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ee4d2d;
+  color: #fff;
+  font-style: normal;
+  font-size: 7.5px;
+  font-weight: 800;
+}
+/* Right block: yellow slanted "MEGA DISCOUNT" */
+.shop-strip-mega {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px 0 12px;
+  margin-left: -6px;
+  background: #ffb800;
+  color: #ee4d2d;
+  font-weight: 800;
+  font-size: 9px;
+  line-height: 1.15;
+  clip-path: polygon(7px 0, 100% 0, 100% 100%, 0 100%);
+}
+.shop-strip-mega b { font-weight: 800; }
+.shop-strip-mega i { font-style: normal; font-weight: 800; }
+
+.shop-card-body { padding: 10px 10px 10px; display: flex; flex-direction: column; flex: 1; }
+.shop-card-name {
+  font-size: 14px;
+  line-height: 1.4;
+  color: #222;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 39px;
+}
+.shop-card-mall {
+  display: inline-block;
+  vertical-align: middle;
+  background: #d0011b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 1px 4px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+.shop-card-deal-row { min-height: 26px; margin: 4px 0; }
+.shop-card-deal {
+  display: inline-block;
+  border: 1px solid #ee4d2d;
+  color: #ee4d2d;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+.shop-card-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.shop-card-price {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ee4d2d;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.shop-card-price small { font-size: 13px; margin-right: 1px; }
+.shop-card-price-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 14px;
+  margin-left: 4px;
+  border: 1px solid #ee4d2d;
+  border-radius: 2px;
+  font-size: 9px;
+}
+.shop-card-sold { font-size: 13px; color: #555; }
+.shop-card-loc { font-size: 12px; color: #888; margin-top: 10px; }
+
+/* ---------- Pagination ---------- */
+.shop-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 38px;
+  margin: 40px auto 50px;
+}
+.shop-pager button {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 22px;
+  color: #666;
+  min-width: 56px;
+  height: 42px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.shop-pager button:hover { color: #ee4d2d; }
+.shop-pager button.is-active { background: #ee4d2d; color: #fff; border-radius: 2px; }
+.shop-pager-dots { color: #999; font-size: 20px; min-width: 40px; text-align: center; }
+
+/* ---------- Footer ---------- */
+.shop-footer {
+  background: #fbfbfb;
+  border-top: 4px solid #ee4d2d;
+  padding: 56px 0 24px;
+  margin-bottom: -80px;
+}
+.shop-footer-cols {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+  border-bottom: 1px solid #e5e5e5;
+}
+.shop-footer h4 { margin: 0 0 20px; font-size: 14px; font-weight: 700; color: #222; }
+.shop-footer .shop-footer-sub { margin-top: 28px; }
+.shop-footer ul { list-style: none; margin: 0; padding: 0; }
+.shop-footer li { margin-bottom: 11px; }
+.shop-footer li button,
+.shop-social-link {
+  background: none; border: none; padding: 0;
+  font: inherit; font-size: 14px; color: #444; cursor: pointer; text-align: left;
+}
+.shop-footer li button:hover { color: #ee4d2d; }
+.shop-footer li button.is-accent { color: #ee4d2d; }
+
+.shop-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 10px; max-width: 280px; }
+.shop-chips button {
+  background: #fff;
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 1px 3.5px rgba(0, 0, 0, 0.15);
+  height: 40px;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  cursor: pointer;
+}
+.shop-chips button:hover { color: #ee4d2d; }
+
+.shop-social-link { display: inline-flex; align-items: center; gap: 10px; }
+.shop-social-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  background: #333; color: #fff;
+  border-radius: 5px;
+  font-size: 11px; font-weight: 700;
+}
+
+.shop-app { display: flex; gap: 14px; align-items: flex-start; }
+.shop-qr {
+  width: 124px; height: 124px;
+  padding: 10px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 1px 3.5px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+.shop-app-stores { display: flex; flex-direction: column; gap: 8px; }
+.shop-app-stores button {
+  width: 108px; height: 36px;
+  background: #fff;
+  border: none;
+  box-shadow: 0 1px 3.5px rgba(0, 0, 0, 0.15);
+  font: inherit; font-size: 12px; font-weight: 600; color: #333;
+  cursor: pointer;
+}
+
+.shop-footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+  font-size: 16px;
+  color: #777;
+}
+.shop-regions { display: flex; flex-wrap: wrap; align-items: center; }
+.shop-regions button {
+  background: none; border: none; border-left: 1px solid #ccc;
+  padding: 0 8px; margin-left: 8px;
+  font: inherit; color: #777; cursor: pointer;
+}
+.shop-regions button:first-of-type { border-left: none; }
+.shop-regions button:hover { color: #ee4d2d; }
+
+@media (max-width: 1100px) {
+  .shop-footer-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .shop-footer-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .shop-pager { gap: 8px; }
+  .shop-pager button { min-width: 36px; font-size: 18px; }
+}
+
+/* ---------- Floating chat ---------- */
+.shop-chat {
+  position: fixed;
+  right: 14px; bottom: 14px;
+  z-index: 55;
+  background: #ee4d2d;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 12px 26px;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+.shop-chat-badge {
+  position: absolute;
+  top: -10px; right: -8px;
+  background: #ee4d2d;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 12px;
+  width: 22px; height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+/* ---------- Fake pop-up ads ---------- */
+.shop-popup-overlay {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 16px;
+  animation: shop-pop-fade 0.2s ease;
+}
+@keyframes shop-pop-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.shop-popup {
+  position: relative;
+  width: 100%; max-width: 420px;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  animation: shop-pop-in 0.25s ease;
+}
+@keyframes shop-pop-in { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.shop-popup.is-shaking { animation: shop-pop-shake 0.35s ease; }
+@keyframes shop-pop-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); } 40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(4px); }
+}
+
+/* Deliberately small and low-contrast — a classic dark pattern. */
+.shop-popup-x {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  width: 22px; height: 22px;
+  border: none; background: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px; line-height: 1;
+  border-radius: 50%; cursor: pointer;
+}
+.shop-popup-x:hover { background: rgba(255, 255, 255, 0.35); }
+
+.shop-popup-art {
+  position: relative;
+  height: 150px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 24px; text-align: center;
+  color: #fff;
+}
+.shop-popup-art-big { font-size: 26px; font-weight: 500; line-height: 1.2; }
+.shop-popup-ad {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 10px; background: rgba(255, 255, 255, 0.85); color: #555;
+  padding: 1px 6px; border-radius: 3px;
+}
+
+.shop-popup-banner {
+  position: relative; display: block; width: 100%;
+  padding: 0; border: none; background: #d83a1c; cursor: pointer;
+}
+.shop-popup-banner img { display: block; width: 100%; height: auto; }
+.shop-popup-banner .shop-popup-ad { top: 8px; left: 8px; }
+
+.shop-popup-body { padding: 16px 20px 18px; text-align: center; }
+.shop-popup-body p { margin: 0 0 14px; font-size: 14px; color: #555; line-height: 1.45; }
+.shop-popup-cta {
+  width: 100%; border: none; background: #ee4d2d; color: #fff;
+  font: inherit; font-size: 15px; font-weight: 500;
+  padding: 11px; border-radius: 3px; cursor: pointer;
+}
+.shop-popup-cta:hover { background: #d73f1f; }
+.shop-popup-skip {
+  margin-top: 10px; background: none; border: none;
+  font: inherit; font-size: 12px; color: #aaa; cursor: pointer;
+}
+.shop-popup-skip:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-popup, .shop-popup-overlay, .shop-popup.is-shaking { animation: none; }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+  .shop-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .shop-topbar { display: none; }
+  .shop-header-main { flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+  .shop-logo { font-size: 24px; }
+  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0 8px; }
+  .shop-keywords { display: none; }
+}
+
+/* ==================================================================
+   Reveal stage — shown only after "Exit simulation" is clicked.
+=================================================================== */
+.adland-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #0F1A3C;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.adland-card {
+  max-width: 560px;
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.adland-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1C3FAE;
+  background: #E7ECFB;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+.adland-card h1 { font-size: 22px; margin: 0 0 10px; color: #0F1A3C; }
+.adland-card h2 { font-size: 15px; margin: 24px 0 8px; color: #0F1A3C; }
+.adland-intro { color: #4a4f66; line-height: 1.55; }
+
+.adland-flags {
+  margin: 0;
+  padding-left: 20px;
+  color: #333;
+  line-height: 1.6;
+}
+.adland-flags li { margin-bottom: 8px; }
+.adland-card p { color: #4a4f66; line-height: 1.55; }
+
+.adland-btn {
+  margin-top: 26px;
+  border: none;
+  background: #2C6BED;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14.5px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.adland-btn:hover { background: #1C3FAE; }
+
+/* ---------- SVG icon sizing ---------- */
+.shop-topbar svg { vertical-align: -3px; font-size: 16px; }
+.shop-topbar button { display: inline-flex; align-items: center; gap: 4px; }
+.shop-social svg { font-size: 12px; }
+.shop-search button svg { font-size: 18px; }
+.shop-cart svg { font-size: 30px; }
+.shop-card-play svg { font-size: 14px; }
+.shop-card-price-icon svg { font-size: 9px; }
+.shop-card-loc { display: flex; align-items: center; gap: 3px; }
+.shop-card-loc svg { font-size: 12px; }
+.shop-chat { display: inline-flex; align-items: center; gap: 8px; }
+.shop-chat svg { font-size: 24px; }

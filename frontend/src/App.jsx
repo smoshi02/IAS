@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import AdLanding from './pages/AdLanding';
 
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -28,6 +29,7 @@ export default function App() {
 
           <Route path="/home" element={<RequireUser><Home /></RequireUser>} />
           <Route path="/profile" element={<RequireUser><Profile /></RequireUser>} />
+          <Route path="/sim/ad-landing" element={<AdLanding />} />
 
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route

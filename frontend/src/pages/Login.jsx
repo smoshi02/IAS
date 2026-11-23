@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { IconLogoMark, IconEye, IconEyeOff, IconHeartFilled, IconStarFilled, IconStoreFilled, IconClock } from '../components/Icons';
+import SimAd from '../components/SimAd';
 import '../styles/login.css';
 
 const LANGUAGES = ['English (US)', 'Filipino', 'Bisaya', 'Español', '日本語', '한국어', '中文(简体)'];
@@ -142,6 +143,8 @@ export default function Login() {
             <Link to="/register" className="lg-btn-secondary">Create new account</Link>
 
             <div className="lg-brandmark"><IconLogoMark /> PHISHBOOK</div>
+
+            <SimAd />
           </form>
         </div>
       </div>

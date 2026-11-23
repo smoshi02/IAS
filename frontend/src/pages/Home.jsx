@@ -1,8 +1,9 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { IconLogoMark, IconSearch, IconBell, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock, IconThumbsUp, IconComment, IconShare, IconLogout, IconPlus } from '../components/Icons';
+import SimAd from '../components/SimAd';
 import '../styles/home.css';
 
 function avatarUrl(name, bg) {
@@ -59,6 +60,49 @@ const contacts = [
   { id: 3, name: 'Lin Zhao', color: '16a085' },
   { id: 4, name: 'Maya Santos', color: '2C6BED' },
 ];
+
+const TOAST_DELAY = 6000; // ms after Home loads before the notification slides in
+
+// Laptop-style notification toast (bottom-right). The X closes it
+// peacefully; clicking anywhere else on it opens the ad landing page.
+function AdToast({ onOpen }) {
+  const [visible, setVisible] = useState(false);
+  const [imgOk, setImgOk] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), TOAST_DELAY);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!visible) return null;
+  return (
+    <div
+      className="ad-toast"
+      role="button"
+      tabIndex={0}
+      aria-label="Sponsored notification: Daily Brand Discounts"
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpen(); }}
+    >
+      <button
+        type="button"
+        className="ad-toast-x"
+        aria-label="Dismiss"
+        onClick={(e) => { e.stopPropagation(); setVisible(false); }}
+      >
+        &times;
+      </button>
+      <div className="ad-toast-thumb">
+        {imgOk && <img src="/images/bannerad.jpg" alt="" onError={() => setImgOk(false)} />}
+      </div>
+      <div className="ad-toast-text">
+        <div className="ad-toast-source">Shoppa &middot; Sponsored</div>
+        <div className="ad-toast-title">Daily Brand Discounts</div>
+        <div className="ad-toast-body">Collect golden tickets and stand a chance to win vouchers.</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const { user, logout } = useAuth();
@@ -274,8 +318,12 @@ export default function Home() {
             </div>
           )}
 
-          {visiblePosts.map((post) => (
-            <div className="post-card" key={post.id}>
+          {visiblePosts.map((post, idx) => (
+            <React.Fragment key={post.id}>
+            {section === 'feed' && idx === 1 && (
+              <div className="feed-ad"><SimAd variant="default" /></div>
+            )}
+            <div className="post-card">
               <div className="post-header">
                 <img className="avatar" src={avatarUrl(post.author, post.color)} alt={post.author} />
                 <div>
@@ -320,6 +368,7 @@ export default function Home() {
                 </div>
               )}
             </div>
+            </React.Fragment>
           ))}
 
           {visiblePosts.length === 0 && (
@@ -328,6 +377,7 @@ export default function Home() {
         </main>
 
         <aside className="sidebar right">
+          <SimAd variant="sidebar" />
           {featured.map((f) => (
             <div className="feature-card" key={f.id}>
               <div className="feature-thumb" style={{ background: `linear-gradient(160deg, #${f.color}, #1C3FAE)` }}><IconImage /></div>
@@ -359,6 +409,8 @@ export default function Home() {
         </aside>
       </div>
 
+      <AdToast onOpen={() => navigate('/sim/ad-landing')} />
+
       <div className="chat-dock">
         {chat && (
           <div className="chat-window">
@@ -377,13 +429,6 @@ export default function Home() {
             </form>
           </div>
         )}
-        <div className="chat-bubbles">
-          {contacts.map((c) => (
-            <button type="button" key={c.id} title={c.name} className={chat && chat.id === c.id ? 'active' : ''} onClick={() => openChat(c)}>
-              <img src={avatarUrl(c.name, c.color)} alt={c.name} />
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
