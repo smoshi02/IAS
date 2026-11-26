@@ -17,15 +17,20 @@ class PostController extends Controller
         return $n !== '' ? $n : ($u->name ?? 'User');
     }
 
-    private function query($uid)
+    private function query()
     {
-        return Post::with(['user:id,first_name,last_name', 'sharedPost.user:id,first_name,last_name'])
-            ->withCount(['likes', 'comments', 'shares'])
-            ->withExists(['likes as liked_by_me' => fn ($q) => $q->where('user_id', $uid)]);
+        return Post::with([
+                'user:id,first_name,last_name',
+                'sharedPost.user:id,first_name,last_name',
+                'likes:id,post_id,user_id,type',
+            ])
+            ->withCount(['comments', 'shares']);
     }
 
-    private function fmt(Post $p, bool $nested = true): array
+    private function fmt(Post $p, $uid, bool $nested = true): array
     {
+        $likes = $p->relationLoaded('likes') ? $p->likes : collect();
+
         return [
             'id'             => $p->id,
             'body'           => $p->body,
@@ -33,11 +38,12 @@ class PostController extends Controller
             'media_type'     => $p->media_type,
             'created_at'     => $p->created_at->toIso8601String(),
             'user'           => ['id' => $p->user->id, 'name' => $this->fullName($p->user)],
-            'likes_count'    => $p->likes_count ?? 0,
+            'likes_count'    => $likes->count(),
+            'reactions'      => $likes->groupBy('type')->map(fn ($g) => $g->count()),
+            'my_reaction'    => optional($likes->firstWhere('user_id', $uid))->type,
             'comments_count' => $p->comments_count ?? 0,
             'shares_count'   => $p->shares_count ?? 0,
-            'liked_by_me'    => (bool) ($p->liked_by_me ?? false),
-            'shared'         => ($nested && $p->sharedPost) ? $this->fmt($p->sharedPost, false) : null,
+            'shared'         => ($nested && $p->sharedPost) ? $this->fmt($p->sharedPost, $uid, false) : null,
         ];
     }
 
@@ -53,8 +59,9 @@ class PostController extends Controller
 
     public function index(Request $r)
     {
-        $page = $this->query($r->user()->id)->latest()->paginate(10);
-        $page->getCollection()->transform(fn ($p) => $this->fmt($p));
+        $uid  = $r->user()->id;
+        $page = $this->query()->latest()->paginate(10);
+        $page->getCollection()->transform(fn ($p) => $this->fmt($p, $uid));
         return $page;
     }
 
@@ -80,7 +87,7 @@ class PostController extends Controller
             'media_type' => $type,
         ]);
 
-        return response()->json($this->fmt($this->query($r->user()->id)->findOrFail($post->id)), 201);
+        return response()->json($this->fmt($this->query()->findOrFail($post->id), $r->user()->id), 201);
     }
 
     public function destroy(Request $r, Post $post)
@@ -95,16 +102,29 @@ class PostController extends Controller
 
     public function like(Request $r, Post $post)
     {
+        $r->validate(['type' => 'nullable|in:like,love,haha,wow,sad,angry']);
+        $type = $r->input('type', 'like');
         $uid  = $r->user()->id;
-        $like = Like::where(['user_id' => $uid, 'post_id' => $post->id])->first();
-        if ($like) {
-            $like->delete();
-            $liked = false;
+
+        $existing = Like::where(['user_id' => $uid, 'post_id' => $post->id])->first();
+
+        if ($existing && $existing->type === $type) {
+            $existing->delete();
+            $mine = null;
+        } elseif ($existing) {
+            $existing->update(['type' => $type]);
+            $mine = $type;
         } else {
-            Like::create(['user_id' => $uid, 'post_id' => $post->id]);
-            $liked = true;
+            Like::create(['user_id' => $uid, 'post_id' => $post->id, 'type' => $type]);
+            $mine = $type;
         }
-        return ['liked' => $liked, 'likes_count' => $post->likes()->count()];
+
+        $likes = $post->likes()->get(['type']);
+        return [
+            'my_reaction' => $mine,
+            'likes_count' => $likes->count(),
+            'reactions'   => $likes->groupBy('type')->map(fn ($g) => $g->count()),
+        ];
     }
 
     public function comments(Post $post)
@@ -130,6 +150,6 @@ class PostController extends Controller
             'body'           => $r->input('body'),
             'shared_post_id' => $orig->id,
         ]);
-        return response()->json($this->fmt($this->query($r->user()->id)->findOrFail($new->id)), 201);
+        return response()->json($this->fmt($this->query()->findOrFail($new->id), $r->user()->id), 201);
     }
 }

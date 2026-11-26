@@ -39,7 +39,6 @@ const SECTIONS = {
   photos: 'Photos',
 };
 
-// Top tabs (icon-only) and left shortcuts
 const NAV_TABS = [
   { key: 'feed', label: 'Home', Icon: IconHome },
   { key: 'friends', label: 'Friends', Icon: IconUser },
@@ -68,10 +67,8 @@ const contacts = [
   { id: 4, name: 'Maya Santos', color: '2C6BED' },
 ];
 
-const TOAST_DELAY = 6000; // ms after Home loads before the notification slides in
+const TOAST_DELAY = 6000;
 
-// Laptop-style notification toast (bottom-right). The X closes it
-// peacefully; clicking anywhere else on it opens the ad landing page.
 function AdToast({ onOpen }) {
   const [visible, setVisible] = useState(false);
   const [imgOk, setImgOk] = useState(true);
@@ -116,6 +113,37 @@ function PostMedia({ post }) {
   return post.media_type === 'video'
     ? <video className="post-media" src={post.media_url} controls />
     : <img className="post-media" src={post.media_url} alt="Post" />;
+}
+
+const REACTIONS = [
+  { key: 'like',  emoji: '👍', label: 'Like',  color: '#1877f2' },
+  { key: 'love',  emoji: '❤️', label: 'Love',  color: '#f33e58' },
+  { key: 'haha',  emoji: '😆', label: 'Haha',  color: '#f7b125' },
+  { key: 'wow',   emoji: '😮', label: 'Wow',   color: '#f7b125' },
+  { key: 'sad',   emoji: '😢', label: 'Sad',   color: '#f7b125' },
+  { key: 'angry', emoji: '😡', label: 'Angry', color: '#e9710f' },
+];
+const reactionOf = (k) => REACTIONS.find((r) => r.key === k);
+
+function ReactionButton({ post, onReact }) {
+  const mine = reactionOf(post.my_reaction);
+  return (
+    <div className="react-wrap">
+      <div className="react-picker">
+        {REACTIONS.map((r) => (
+          <button type="button" key={r.key} title={r.label} onClick={() => onReact(post.id, r.key)}>
+            {r.emoji}
+          </button>
+        ))}
+      </div>
+      <span
+        onClick={() => onReact(post.id, post.my_reaction || 'like')}
+        style={mine ? { color: mine.color, fontWeight: 700 } : undefined}
+      >
+        {mine ? <>{mine.emoji} {mine.label}</> : <><IconThumbsUp /> Like</>}
+      </span>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -170,10 +198,10 @@ export default function Home() {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   };
 
-  const toggleLike = async (id) => {
+  const react = async (id, type = 'like') => {
     try {
-      const { data } = await api.post(`/posts/${id}/like`);
-      updatePost(id, { liked_by_me: data.liked, likes_count: data.likes_count });
+      const { data } = await api.post(`/posts/${id}/like`, { type });
+      updatePost(id, { my_reaction: data.my_reaction, likes_count: data.likes_count, reactions: data.reactions });
     } catch (e) { /* ignore */ }
   };
 
@@ -215,6 +243,12 @@ export default function Home() {
     } catch (e) { /* ignore */ }
   };
 
+  const clearFile = () => {
+    if (composerPreview) URL.revokeObjectURL(composerPreview);
+    setComposerFile(null);
+    setComposerPreview(null);
+  };
+
   const submitNewPost = async (e) => {
     e.preventDefault();
     const text = composerText.trim();
@@ -234,12 +268,6 @@ export default function Home() {
     } finally {
       setPosting(false);
     }
-  };
-
-  const clearFile = () => {
-    if (composerPreview) URL.revokeObjectURL(composerPreview);
-    setComposerFile(null);
-    setComposerPreview(null);
   };
 
   const pickFile = (e) => {
@@ -269,7 +297,6 @@ export default function Home() {
 
   const visiblePosts = useMemo(() => {
     let list = posts;
-    // No backend data for the other sections yet — show nothing rather than fake content.
     if (section !== 'feed') list = [];
     if (query.trim()) {
       const q = query.trim().toLowerCase();
@@ -424,10 +451,18 @@ export default function Home() {
                   <PostMedia post={post.shared} />
                 </div>
               )}
+
+              {post.likes_count > 0 && (
+                <div className="reaction-summary">
+                  {Object.keys(post.reactions || {}).map((k) => (
+                    <span key={k}>{reactionOf(k)?.emoji}</span>
+                  ))}{' '}
+                  {post.likes_count}
+                </div>
+              )}
+
               <div className="post-actions">
-                <span onClick={() => toggleLike(post.id)} className={post.liked_by_me ? 'active-like' : ''}>
-                  <IconThumbsUp /> Like ({post.likes_count})
-                </span>
+                <ReactionButton post={post} onReact={react} />
                 <span onClick={() => toggleComments(post.id)}>
                   <IconComment /> Comment ({post.comments_count})
                 </span>
