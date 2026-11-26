@@ -102,26 +102,32 @@ export default function Login() {
 
             {error && <div className="lg-error" role="alert">{error}</div>}
 
-            <input
-              className="lg-field"
-              type="text"
-              placeholder="Email, mobile number or username"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              autoComplete="username"
-              required
-            />
-
-            <div className="lg-password-wrap">
+            <div className="lg-float">
               <input
+                id="lg-identifier"
+                className="lg-field"
+                type="text"
+                placeholder=" "
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                autoComplete="username"
+                required
+              />
+              <label htmlFor="lg-identifier">Email, mobile number or username</label>
+            </div>
+
+            <div className="lg-float lg-password-wrap">
+              <input
+                id="lg-password"
                 className="lg-field"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
+                placeholder=" "
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
               />
+              <label htmlFor="lg-password">Password</label>
               <button
                 type="button"
                 className="lg-eye"
