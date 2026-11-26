@@ -1,0 +1,112 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Story;
+use App\Models\StoryReaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+
+class StoryController extends Controller
+{
+    private function fullName($u): string
+    {
+        $n = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+        return $n !== '' ? $n : ($u->name ?? 'User');
+    }
+
+    public function index(Request $r)
+    {
+        $uid = $r->user()->id;
+
+        return Story::where('expires_at', '>', now())
+            ->with(['user:id,first_name,last_name', 'reactions:id,story_id,user_id,type'])
+            ->oldest()
+            ->get()
+            ->groupBy('user_id')
+            ->map(function ($items) use ($uid) {
+                $u = $items->first()->user;
+                return [
+                    'user'    => ['id' => $u->id, 'name' => $this->fullName($u)],
+                    'stories' => $items->map(fn ($s) => [
+                        'id'              => $s->id,
+                        'media_url'       => asset('storage/' . $s->media_path),
+                        'media_type'      => $s->media_type,
+                        'caption'         => $s->caption,
+                        'filter'          => $s->filter,
+                        'text_color'      => $s->text_color,
+                        'text_pos'        => $s->text_pos,
+                        'created_at'      => $s->created_at->toIso8601String(),
+                        'my_reaction'     => optional($s->reactions->firstWhere('user_id', $uid))->type,
+                        'reactions'       => $s->reactions->groupBy('type')->map(fn ($g) => $g->count()),
+                        'reactions_count' => $s->reactions->count(),
+                    ])->values(),
+                ];
+            })
+            ->sortBy(fn ($g) => $g['user']['id'] === $uid ? 0 : 1)
+            ->values();
+    }
+
+    public function store(Request $r)
+    {
+        $r->validate([
+            'media'      => 'required|file|mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov|max:51200',
+            'caption'    => 'nullable|string|max:200',
+            'filter'     => 'nullable|in:none,mono,warm,cool,vivid,fade',
+            'text_color' => 'nullable|in:white,black,yellow,pink,blue',
+            'text_pos'   => 'nullable|in:top,center,bottom',
+        ]);
+
+        $f = $r->file('media');
+        $story = Story::create([
+            'user_id'    => $r->user()->id,
+            'media_path' => $f->store('stories', 'public'),
+            'media_type' => str_starts_with($f->getMimeType(), 'video') ? 'video' : 'image',
+            'caption'    => $r->input('caption'),
+            'filter'     => $r->input('filter') ?: 'none',
+            'text_color' => $r->input('text_color') ?: 'white',
+            'text_pos'   => $r->input('text_pos') ?: 'bottom',
+            'expires_at' => now()->addHours(24),
+        ]);
+
+        return response()->json(['id' => $story->id], 201);
+    }
+
+    public function react(Request $r, Story $story)
+    {
+        $r->validate(['type' => 'required|in:like,love,haha,wow,sad,angry']);
+        abort_if($story->expires_at->isPast(), 404);
+
+        $type = $r->input('type');
+        $uid  = $r->user()->id;
+
+        $existing = StoryReaction::where(['story_id' => $story->id, 'user_id' => $uid])->first();
+
+        if ($existing && $existing->type === $type) {
+            $existing->delete();
+            $mine = null;
+        } elseif ($existing) {
+            $existing->update(['type' => $type]);
+            $mine = $type;
+        } else {
+            StoryReaction::create(['story_id' => $story->id, 'user_id' => $uid, 'type' => $type]);
+            $mine = $type;
+        }
+
+        $all = $story->reactions()->get(['type']);
+        return [
+            'my_reaction'     => $mine,
+            'reactions'       => $all->groupBy('type')->map(fn ($g) => $g->count()),
+            'reactions_count' => $all->count(),
+        ];
+    }
+
+    public function destroy(Request $r, Story $story)
+    {
+        abort_if($story->user_id !== $r->user()->id, 403);
+        Storage::disk('public')->delete($story->media_path);
+        $story->delete();
+        return response()->noContent();
+    }
+}

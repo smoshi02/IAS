@@ -4,7 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import { IconLogoMark, IconSearch, IconBell, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock, IconThumbsUp, IconComment, IconShare, IconLogout, IconPlus } from '../components/Icons';
 import SimAd from '../components/SimAd';
+import Stories from '../components/Stories';
 import '../styles/home.css';
+import PostMenu from '../components/PostMenu';
+
 
 function avatarUrl(name, bg) {
   const encoded = encodeURIComponent(name);
@@ -156,6 +159,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [shareTarget, setShareTarget] = useState(null);
+  const [shareText, setShareText] = useState('');
+  const [sharing, setSharing] = useState(false);
   const [section, setSection] = useState('feed');
   const [query, setQuery] = useState('');
   const [showNotifs, setShowNotifs] = useState(false);
@@ -228,21 +236,38 @@ export default function Home() {
     } catch (e) { /* ignore */ }
   };
 
-  const sharePost = async (post) => {
+  const closeShare = () => {
+    if (sharing) return;
+    setShareTarget(null);
+    setShareText('');
+  };
+
+  const confirmShare = async () => {
+    if (!shareTarget) return;
+    const post = shareTarget;
+    setSharing(true);
     try {
-      const { data } = await api.post(`/posts/${post.id}/share`);
+      const body = shareText.trim();
+      const { data } = await api.post(`/posts/${post.id}/share`, body ? { body } : {});
       setPosts((prev) => [data, ...prev.map((p) => (p.id === post.id ? { ...p, shares_count: p.shares_count + 1 } : p))]);
-    } catch (e) { /* ignore */ }
+      setShareTarget(null);
+      setShareText('');
+    } catch (e) { /* ignore */ } finally {
+      setSharing(false);
+    }
   };
 
-  const deletePost = async (id) => {
-    if (!window.confirm('Delete this post?')) return;
+  const confirmDelete = async () => {
+    if (deleteId === null) return;
+    setDeleting(true);
     try {
-      await api.delete(`/posts/${id}`);
-      setPosts((prev) => prev.filter((p) => p.id !== id));
-    } catch (e) { /* ignore */ }
+      await api.delete(`/posts/${deleteId}`);
+      setPosts((prev) => prev.filter((p) => p.id !== deleteId));
+      setDeleteId(null);
+    } catch (e) { /* ignore */ } finally {
+      setDeleting(false);
+    }
   };
-
   const clearFile = () => {
     if (composerPreview) URL.revokeObjectURL(composerPreview);
     setComposerFile(null);
@@ -404,21 +429,7 @@ export default function Home() {
             </form>
           )}
 
-          {section === 'feed' && (
-            <div className="stories-row">
-              <div className="story-card add">
-                <IconPlus />
-                <span>Add story</span>
-              </div>
-              {stories.map((s) => (
-                <div className="story-card" key={s.id} style={{ background: `linear-gradient(160deg, #${s.color}, #1C3FAE)` }}>
-                  <img className="story-avatar" src={avatarUrl(s.name, s.color)} alt={s.name} />
-                  <IconImage className="story-glyph" />
-                  <span className="story-label">{s.name.split(' ')[0]}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          {section === 'feed' && <Stories />}
 
           {visiblePosts.map((post, idx) => (
             <React.Fragment key={post.id}>
@@ -433,7 +444,7 @@ export default function Home() {
                   <div className="post-time">{timeAgo(post.created_at)} &middot; Public</div>
                 </div>
                 {user?.id === post.user.id && (
-                  <button type="button" className="post-delete" onClick={() => deletePost(post.id)}>Delete</button>
+                  <PostMenu onDelete={() => setDeleteId(post.id)} />
                 )}
               </div>
               {post.body && <p className="post-text">{post.body}</p>}
@@ -466,7 +477,7 @@ export default function Home() {
                 <span onClick={() => toggleComments(post.id)}>
                   <IconComment /> Comment ({post.comments_count})
                 </span>
-                <span onClick={() => sharePost(post)}>
+                <span onClick={() => { setShareText(''); setShareTarget(post); }}>
                   <IconShare /> Share ({post.shares_count})
                 </span>
               </div>
@@ -532,6 +543,48 @@ export default function Home() {
           </ul>
         </aside>
       </div>
+
+      {deleteId !== null && (
+        <div className="confirm-overlay" onClick={() => !deleting && setDeleteId(null)}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete post?</h3>
+            <p>This can&apos;t be undone.</p>
+            <div className="confirm-actions">
+              <button type="button" className="ghost" disabled={deleting} onClick={() => setDeleteId(null)}>Cancel</button>
+              <button type="button" className="danger" disabled={deleting} onClick={confirmDelete}>
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shareTarget && (
+        <div className="confirm-overlay" onClick={closeShare}>
+          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
+            <h3>Share this post?</h3>
+            <div className="share-preview">
+              <strong>{shareTarget.user.name}</strong>
+              <p>
+                {(shareTarget.body || (shareTarget.media_url ? 'Shared a photo or video' : '')).slice(0, 140)}
+              </p>
+            </div>
+            <textarea
+              className="share-input"
+              maxLength={2000}
+              placeholder="Say something about this… (optional)"
+              value={shareText}
+              onChange={(e) => setShareText(e.target.value)}
+            />
+            <div className="confirm-actions">
+              <button type="button" className="ghost" disabled={sharing} onClick={closeShare}>Cancel</button>
+              <button type="button" className="primary" disabled={sharing} onClick={confirmShare}>
+                {sharing ? 'Sharing…' : 'Share'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AdToast onOpen={() => navigate('/sim/ad-landing')} />
 
