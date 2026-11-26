@@ -25,6 +25,9 @@ Route::middleware('throttle:20,1')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Feed: posts, likes, comments, shares
+    require __DIR__ . '/feed.php';
 });
 
 Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {

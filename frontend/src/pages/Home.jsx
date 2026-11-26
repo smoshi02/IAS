@@ -11,16 +11,23 @@ function avatarUrl(name, bg) {
   return `https://ui-avatars.com/api/?name=${encoded}&background=${bg}&color=fff&bold=true&size=128`;
 }
 
+const COLORS = ['2C6BED', '42B72A', 'F0902F', '9b59b6', '16a085'];
+const colorFor = (id) => COLORS[Math.abs(Number(id) || 0) % COLORS.length];
+
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return 'Just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 const stories = [
   { id: 1, name: 'Maya Santos', color: '2C6BED' },
   { id: 2, name: 'Jordan Cruz', color: '42B72A' },
   { id: 3, name: 'Priya Nair', color: 'F0902F' },
-];
-
-const initialPosts = [
-  { id: 1, author: 'Maya Santos', color: '2C6BED', time: '2h', text: 'Finished my cybersecurity project presentation today!', likes: 24, liked: false, comments: ['Nice work!', 'Congrats Maya!'], media: { color: '2C6BED' } },
-  { id: 2, author: 'Jordan Cruz', color: '42B72A', time: '5h', text: 'Anyone else up late studying for the networks exam?', likes: 11, liked: false, comments: ['Same here 😅'.replace('😅', '')] },
-  { id: 3, author: 'Priya Nair', color: 'F0902F', time: '1d', text: 'Great workshop on web app security this week.', likes: 42, liked: false, comments: [] },
 ];
 
 const SECTIONS = {
@@ -104,18 +111,32 @@ function AdToast({ onOpen }) {
   );
 }
 
+function PostMedia({ post }) {
+  if (!post.media_url) return null;
+  return post.media_type === 'video'
+    ? <video className="post-media" src={post.media_url} controls />
+    : <img className="post-media" src={post.media_url} alt="Post" />;
+}
+
 export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [posts, setPosts] = useState(initialPosts);
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState('');
   const [section, setSection] = useState('feed');
   const [query, setQuery] = useState('');
   const [showNotifs, setShowNotifs] = useState(false);
   const [openComments, setOpenComments] = useState({});
+  const [commentsMap, setCommentsMap] = useState({});
   const [commentDraft, setCommentDraft] = useState({});
   const [composerText, setComposerText] = useState('');
-  const [composerImage, setComposerImage] = useState(null);
+  const [composerFile, setComposerFile] = useState(null);
+  const [composerPreview, setComposerPreview] = useState(null);
   const [chat, setChat] = useState(null);
   const [chatLog, setChatLog] = useState({});
   const [chatDraft, setChatDraft] = useState('');
@@ -124,62 +145,110 @@ export default function Home() {
 
   const userFullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'You';
 
+  const loadPosts = async (p = 1) => {
+    try {
+      const { data } = await api.get('/posts', { params: { page: p } });
+      setPosts((prev) => (p === 1 ? data.data : [...prev, ...data.data]));
+      setPage(data.current_page);
+      setLastPage(data.last_page);
+    } catch (e) {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadPosts(1); }, []);
+
   const handleLogout = async () => {
     try { await api.post('/logout'); } catch (e) { /* ignore */ }
     logout();
     navigate('/login');
   };
 
-  const toggleLike = (id) => {
-    setPosts((prev) => prev.map((p) => p.id === id
-      ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
-      : p));
+  const updatePost = (id, patch) => {
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   };
 
-  const toggleComments = (id) => {
-    setOpenComments((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const submitComment = (id) => {
-    const text = (commentDraft[id] || '').trim();
-    if (!text) return;
-    setPosts((prev) => prev.map((p) => p.id === id ? { ...p, comments: [...p.comments, text] } : p));
-    setCommentDraft((prev) => ({ ...prev, [id]: '' }));
-  };
-
-  const sharePost = async (post) => {
-    const shareText = `${post.author}: ${post.text}`;
+  const toggleLike = async (id) => {
     try {
-      await navigator.clipboard.writeText(shareText);
-      alert('Post copied to clipboard.');
-    } catch {
-      alert(shareText);
+      const { data } = await api.post(`/posts/${id}/like`);
+      updatePost(id, { liked_by_me: data.liked, likes_count: data.likes_count });
+    } catch (e) { /* ignore */ }
+  };
+
+  const toggleComments = async (id) => {
+    const willOpen = !openComments[id];
+    setOpenComments((prev) => ({ ...prev, [id]: willOpen }));
+    if (willOpen && !commentsMap[id]) {
+      try {
+        const { data } = await api.get(`/posts/${id}/comments`);
+        setCommentsMap((prev) => ({ ...prev, [id]: data }));
+      } catch (e) { /* ignore */ }
     }
   };
 
-  const submitNewPost = (e) => {
-    e.preventDefault();
-    const text = composerText.trim();
-    if (!text && !composerImage) return;
-    const newPost = {
-      id: Date.now(),
-      author: userFullName,
-      color: '2C6BED',
-      time: 'Just now',
-      text,
-      likes: 0,
-      liked: false,
-      comments: [],
-      media: composerImage ? { src: composerImage } : null,
-    };
-    setPosts((prev) => [newPost, ...prev]);
-    setComposerText('');
-    setComposerImage(null);
+  const submitComment = async (id) => {
+    const text = (commentDraft[id] || '').trim();
+    if (!text) return;
+    try {
+      const { data } = await api.post(`/posts/${id}/comments`, { body: text });
+      setCommentsMap((prev) => ({ ...prev, [id]: [...(prev[id] || []), data] }));
+      setCommentDraft((prev) => ({ ...prev, [id]: '' }));
+      const post = posts.find((p) => p.id === id);
+      if (post) updatePost(id, { comments_count: post.comments_count + 1 });
+    } catch (e) { /* ignore */ }
   };
 
-  const pickImage = (e) => {
+  const sharePost = async (post) => {
+    try {
+      const { data } = await api.post(`/posts/${post.id}/share`);
+      setPosts((prev) => [data, ...prev.map((p) => (p.id === post.id ? { ...p, shares_count: p.shares_count + 1 } : p))]);
+    } catch (e) { /* ignore */ }
+  };
+
+  const deletePost = async (id) => {
+    if (!window.confirm('Delete this post?')) return;
+    try {
+      await api.delete(`/posts/${id}`);
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) { /* ignore */ }
+  };
+
+  const submitNewPost = async (e) => {
+    e.preventDefault();
+    const text = composerText.trim();
+    if ((!text && !composerFile) || posting) return;
+    setPosting(true);
+    setPostError('');
+    const fd = new FormData();
+    if (text) fd.append('body', text);
+    if (composerFile) fd.append('media', composerFile);
+    try {
+      const { data } = await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setPosts((prev) => [data, ...prev]);
+      setComposerText('');
+      clearFile();
+    } catch (err) {
+      setPostError(err.response?.data?.message || 'Could not post. Check the file size/type.');
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const clearFile = () => {
+    if (composerPreview) URL.revokeObjectURL(composerPreview);
+    setComposerFile(null);
+    setComposerPreview(null);
+  };
+
+  const pickFile = (e) => {
     const file = e.target.files && e.target.files[0];
-    if (file) setComposerImage(URL.createObjectURL(file));
+    if (file) {
+      if (composerPreview) URL.revokeObjectURL(composerPreview);
+      setComposerFile(file);
+      setComposerPreview(URL.createObjectURL(file));
+    }
     e.target.value = '';
   };
 
@@ -204,7 +273,8 @@ export default function Home() {
     if (section !== 'feed') list = [];
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      list = list.filter((p) => p.text.toLowerCase().includes(q) || p.author.toLowerCase().includes(q));
+      list = list.filter((p) =>
+        (p.body || '').toLowerCase().includes(q) || p.user.name.toLowerCase().includes(q));
     }
     return list;
   }, [posts, section, query]);
@@ -286,19 +356,24 @@ export default function Home() {
                   onChange={(e) => setComposerText(e.target.value)}
                 />
                 <div className="composer-tools">
-                  <button type="button" title="Add photo" onClick={() => fileRef.current && fileRef.current.click()}><IconImage /></button>
+                  <button type="button" title="Add photo or video" onClick={() => fileRef.current && fileRef.current.click()}><IconImage /></button>
                   <button type="button" title="Mention someone" onClick={() => insertSymbol('@')}><IconUsers /></button>
                   <button type="button" title="Add hashtag" onClick={() => insertSymbol('#')}>#</button>
                 </div>
-                <button type="submit" className="post-btn" disabled={!composerText.trim() && !composerImage}>Post</button>
+                <button type="submit" className="post-btn" disabled={posting || (!composerText.trim() && !composerFile)}>
+                  {posting ? 'Posting…' : 'Post'}
+                </button>
               </div>
-              <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickImage} />
-              {composerImage && (
+              <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
+              {composerPreview && (
                 <div className="composer-preview">
-                  <img src={composerImage} alt="Selected" />
-                  <button type="button" onClick={() => setComposerImage(null)}>Remove</button>
+                  {composerFile && composerFile.type.startsWith('video')
+                    ? <video src={composerPreview} controls />
+                    : <img src={composerPreview} alt="Selected" />}
+                  <button type="button" onClick={clearFile}>Remove</button>
                 </div>
               )}
+              {postError && <div className="post-error">{postError}</div>}
             </form>
           )}
 
@@ -325,36 +400,46 @@ export default function Home() {
             )}
             <div className="post-card">
               <div className="post-header">
-                <img className="avatar" src={avatarUrl(post.author, post.color)} alt={post.author} />
-                <div>
-                  <div className="post-author">{post.author}</div>
-                  <div className="post-time">{post.time} &middot; Public</div>
+                <img className="avatar" src={avatarUrl(post.user.name, colorFor(post.user.id))} alt={post.user.name} />
+                <div style={{ flex: 1 }}>
+                  <div className="post-author">{post.user.name}</div>
+                  <div className="post-time">{timeAgo(post.created_at)} &middot; Public</div>
                 </div>
+                {user?.id === post.user.id && (
+                  <button type="button" className="post-delete" onClick={() => deletePost(post.id)}>Delete</button>
+                )}
               </div>
-              {post.text && <p className="post-text">{post.text}</p>}
-              {post.media && (post.media.src
-                ? <img className="post-media" src={post.media.src} alt="Post" />
-                : (
-                  <div className="post-media placeholder" style={{ background: `linear-gradient(160deg, #${post.media.color}, #1C3FAE)` }}>
-                    <IconImage />
+              {post.body && <p className="post-text">{post.body}</p>}
+              <PostMedia post={post} />
+              {post.shared && (
+                <div className="shared-post">
+                  <div className="post-header">
+                    <img className="avatar" src={avatarUrl(post.shared.user.name, colorFor(post.shared.user.id))} alt={post.shared.user.name} />
+                    <div>
+                      <div className="post-author">{post.shared.user.name}</div>
+                      <div className="post-time">{timeAgo(post.shared.created_at)}</div>
+                    </div>
                   </div>
-                ))}
+                  {post.shared.body && <p className="post-text">{post.shared.body}</p>}
+                  <PostMedia post={post.shared} />
+                </div>
+              )}
               <div className="post-actions">
-                <span onClick={() => toggleLike(post.id)} className={post.liked ? 'active-like' : ''}>
-                  <IconThumbsUp /> Like ({post.likes})
+                <span onClick={() => toggleLike(post.id)} className={post.liked_by_me ? 'active-like' : ''}>
+                  <IconThumbsUp /> Like ({post.likes_count})
                 </span>
                 <span onClick={() => toggleComments(post.id)}>
-                  <IconComment /> Comment ({post.comments.length})
+                  <IconComment /> Comment ({post.comments_count})
                 </span>
                 <span onClick={() => sharePost(post)}>
-                  <IconShare /> Share
+                  <IconShare /> Share ({post.shares_count})
                 </span>
               </div>
 
               {openComments[post.id] && (
                 <div className="comment-section">
-                  {post.comments.map((c, i) => (
-                    <div className="comment-bubble" key={i}>{c}</div>
+                  {(commentsMap[post.id] || []).map((c) => (
+                    <div className="comment-bubble" key={c.id}><strong>{c.user.name}</strong> {c.body}</div>
                   ))}
                   <div className="comment-input-row">
                     <input
@@ -371,7 +456,11 @@ export default function Home() {
             </React.Fragment>
           ))}
 
-          {visiblePosts.length === 0 && (
+          {section === 'feed' && page < lastPage && !query.trim() && (
+            <button type="button" className="post-btn load-more" onClick={() => loadPosts(page + 1)}>Load more</button>
+          )}
+
+          {!loading && visiblePosts.length === 0 && (
             <div className="empty-state">Nothing here yet.</div>
           )}
         </main>
