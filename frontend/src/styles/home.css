@@ -652,7 +652,7 @@ video.post-media { width: 100%; max-height: 480px; background: #000; border-radi
 .menu-row.profile small { display: block; font-weight: 400; color: #65676b; font-size: 13px; }
 
 /* ---- left sidebar ---- */
-.home-page .home-body { max-width: 1400px; gap: 16px; padding: 16px 16px 40px; }
+.home-page .home-body { max-width: none; width: 100%; margin: 0; gap: 16px; padding: 16px 12px 40px; box-sizing: border-box; }
 .home-page .sidebar.left { width: 300px; top: 72px; }
 .home-page .sidebar.left li { padding: 8px; font-size: 15px; font-weight: 600; color: #050505; border-radius: 8px; gap: 12px; }
 .home-page .sidebar.left li:hover { background: #e4e6eb; }
@@ -668,7 +668,7 @@ video.post-media { width: 100%; max-height: 480px; background: #000; border-radi
 .home-page .feed-heading { font-size: 20px; }
 
 .home-page .create-post {
-  background: #fff; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  background: #fff; border-radius: 16px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 .home-page .composer-row { gap: 8px; }
 .home-page .composer-row > input {
@@ -676,10 +676,9 @@ video.post-media { width: 100%; max-height: 480px; background: #000; border-radi
 }
 .home-page .composer-row > input::placeholder { color: #65676b; }
 .home-page .composer-row > input:hover { background: #e4e6eb; }
-.home-page .composer-tools { gap: 2px; }
-.home-page .composer-tools button { background: transparent; width: 40px; height: 40px; border-radius: 50%; color: #65676b; }
-.home-page .composer-tools button:first-child { color: #45bd62; }
-.home-page .composer-tools button:first-child svg { width: 26px; height: 26px; }
+.home-page .composer-tools { gap: 4px; }
+.home-page .composer-tools button { background: transparent; width: 40px; height: 40px; border-radius: 50%; padding: 0; }
+.home-page .composer-tools button svg { width: 28px; height: 28px; }
 .home-page .composer-tools button:hover { background: #f0f2f5; }
 .home-page .post-btn { background: #0866ff; border-radius: 8px; padding: 9px 18px; font-size: 14.5px; }
 .home-page .post-btn:disabled { background: #e4e6eb; color: #bcc0c4; }
@@ -712,7 +711,7 @@ video.post-media { width: 100%; max-height: 480px; background: #000; border-radi
 .home-page .comment-input-row button { background: #0866ff; }
 
 /* ---- right sidebar ---- */
-.home-page .sidebar.right { width: 330px; background: transparent; box-shadow: none; padding: 0 4px; top: 72px; }
+.home-page .sidebar.right { width: 330px; background: transparent; box-shadow: none; padding: 0; top: 72px; }
 .home-page .sidebar.right h4 { font-size: 17px; color: #65676b; text-transform: none; letter-spacing: 0; font-weight: 600; margin: 14px 0 6px; }
 .home-page .feature-card:hover { background: #e4e6eb; }
 .home-page .contact-list li { padding: 8px; font-size: 15px; font-weight: 600; color: #050505; border-radius: 8px; position: relative; }
@@ -1334,7 +1333,7 @@ img.avatar, .side-avatar, .contact-avatar img, .story-top img, .mm-av img, .mm-f
 .pf-composer-row input { flex: 1; border: 0; background: #f0f2f5; border-radius: 22px; padding: 11px 16px; font-size: 16px; outline: 0; }
 .pf-attach { margin-top: 8px; font-size: 13.5px; color: #65676b; }
 .pf-attach button { border: 0; background: none; color: #0866ff; cursor: pointer; margin-left: 8px; }
-.pf-composer-foot { display: flex; justify-content: space-between; margin-top: 12px; border-top: 1px solid #ced0d4; padding-top: 12px; }
+.pf-composer-foot { display: flex; justify-content: space-between; gap: 4px; margin-top: 12px; border-top: 1px solid #ced0d4; padding-top: 8px; }
 
 .pf-post-head { display: flex; align-items: center; gap: 10px; }
 .pf-post-head img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
@@ -1531,3 +1530,71 @@ img.avatar, .side-avatar, .contact-avatar img, .story-top img, .mm-av img, .mm-f
 .pb-btn svg { width: 22px; height: 22px; }
 .pb-btn .rx-icon { width: 24px; height: 24px; }
 .react-picker { padding: 5px 8px; gap: 4px; }
+
+/* ---- menu + hidden state for other people's posts ---- */
+.post-card[hidden] { display: none; }
+.home-page .post-card:has(.opm-list) { overflow: visible; }
+.opm-actions { display: flex; align-items: center; gap: 2px; }
+.opm-x svg { width: 20px; height: 20px; }
+.opm-list {
+  position: absolute; right: 0; top: 100%; z-index: 30; width: 340px; max-width: calc(100vw - 24px);
+  background: #fff; border-radius: 14px; padding: 8px; box-shadow: 0 2px 16px rgba(0, 0, 0, .25);
+}
+.opm-item {
+  display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0;
+  border-radius: 8px; padding: 10px 12px; font-size: 15px; font-weight: 600; color: #050505;
+  cursor: pointer; text-align: left;
+}
+.opm-item:hover { background: #f0f2f5; }
+.opm-item svg { width: 22px; height: 22px; flex-shrink: 0; color: #050505; }
+.opm-item span { flex: 1; }
+.opm-more svg { width: 18px; height: 18px; color: #65676b; }
+.opm-sep { border: 0; border-top: 1px solid #ced0d4; margin: 6px 4px; }
+.opm-title { display: flex; align-items: center; gap: 12px; padding: 6px 8px; font-size: 16px; font-weight: 700; color: #050505; }
+.opm-back {
+  background: none; border: 0; width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  cursor: pointer; color: #050505; display: flex; align-items: center; justify-content: center;
+}
+.opm-back:hover { background: #f0f2f5; }
+.opm-back svg { width: 20px; height: 20px; }
+
+.hidden-post { padding: 16px; }
+.hp-title { margin: 0 0 10px; font-size: 17px; font-weight: 600; color: #050505; }
+.hp-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.hp-chip {
+  background: #e4e6eb; border: 0; border-radius: 999px; padding: 10px 14px;
+  font-size: 15px; font-weight: 600; color: #050505; cursor: pointer;
+}
+.hp-chip:hover { background: #d8dadf; }
+.hp-chip.on { background: #e7f0ff; color: #0866ff; }
+.hp-steps { list-style: none; margin: 0; padding: 0; }
+.hp-steps button {
+  display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: 0;
+  border-radius: 8px; padding: 10px 8px; font-size: 15px; font-weight: 600; color: #050505;
+  cursor: pointer; text-align: left;
+}
+.hp-steps button:hover:not(:disabled) { background: #f0f2f5; }
+.hp-steps button:disabled { color: #65676b; cursor: default; }
+.hp-steps svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+/* ---- left sidebar: full-color icons + See more / See less ---- */
+.home-page .sidebar.left { max-height: calc(100vh - 84px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.home-page .sidebar.left li .side-icon svg { width: 32px; height: 32px; }
+.home-page .sidebar.left li .side-chev { background: #d8dadf; border-radius: 50%; }
+.home-page .sidebar.left li .side-chev svg { width: 20px; height: 20px; color: #050505; }
+.home-page .sidebar.left li.side-toggle:hover .side-chev { background: #cbcdd2; }
+
+/* ---- profile: shared navbar, composer shortcuts, personal details ---- */
+.home-page.nav-only { min-height: 0; background: transparent; position: sticky; top: 0; z-index: 40; }
+.pf-card.pf-composer { border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.pf-act {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: none; border: 0; border-radius: 8px; padding: 8px 12px;
+  font-size: 15px; font-weight: 600; color: #65676b; cursor: pointer;
+}
+.pf-act:hover { background: #f0f2f5; }
+.pf-act svg { width: 26px; height: 26px; flex-shrink: 0; }
+.pf-post-submit { width: 100%; margin-top: 10px; }
+.pf-detail { display: flex; gap: 10px; padding: 5px 0; font-size: 15px; }
+.pf-detail span { width: 78px; flex-shrink: 0; color: #65676b; }
+.pf-detail b { font-weight: 600; color: #050505; word-break: break-word; min-width: 0; }

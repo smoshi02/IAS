@@ -1,19 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import {
-  IconLogoMark, IconSearch, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock,
-  IconLogout, IconGrid, IconMessenger, IconChevronDown,
-} from '../components/Icons';
+import { IconImage } from '../components/Icons';
 import SimAd from '../components/SimAd';
 import Stories from '../components/Stories';
 import ReactionIcon from '../components/ReactionIcons';
 import PostMenu from '../components/PostMenu';
-import NavMenu from '../components/NavMenu';
-import NotificationBell, { NotificationToast } from '../components/NotificationBell';
+import OtherPostMenu, { HiddenPost } from '../components/OtherPostMenu';
+import TopNav from '../components/TopNav';
+import * as Art from '../components/SideIcons';
+import { NotificationToast } from '../components/NotificationBell';
 import FriendsPanel from '../components/FriendsPanel';
-import { ChatsPanel, ChatDock } from '../components/Messenger';
+import { ChatDock } from '../components/Messenger';
 import useNotifications from '../hooks/useNotifications';
 import useChats from '../hooks/useChats';
 import { avatarOf, timeAgo } from '../utils/people';
@@ -21,29 +20,31 @@ import '../styles/home.css';
 
 const POLL_MS = 4000;
 
-const SECTIONS = {
-  feed: 'Home',
-  friends: 'Friends',
-  groups: 'Groups',
-  saved: 'Saved',
-  memories: 'Memories',
-  photos: 'Photos',
-};
-
-const NAV_TABS = [
-  { key: 'feed', label: 'Home', Icon: IconHome },
-  { key: 'friends', label: 'Friends', Icon: IconUser },
-  { key: 'groups', label: 'Groups', Icon: IconUsers },
-  { key: 'saved', label: 'Saved', Icon: IconBookmark },
-  { key: 'memories', label: 'Memories', Icon: IconClock },
+// always visible, under the profile row
+const SIDE_MAIN = [
+  { key: 'metaai', label: 'Meta AI', Icon: Art.MetaAIIcon },
+  { key: 'friends', label: 'Friends', Icon: Art.FriendsIcon },
+  { key: 'marketplace', label: 'Marketplace', Icon: Art.MarketplaceIcon },
+  { key: 'memories', label: 'Memories', Icon: Art.MemoriesIcon },
+  { key: 'saved', label: 'Saved', Icon: Art.SavedIcon },
+  { key: 'groups', label: 'Groups', Icon: Art.GroupsIcon },
+  { key: 'reels', label: 'Reels', Icon: Art.ReelsIcon },
+  { key: 'feeds', label: 'Feeds', Icon: Art.FeedsIcon },
+  { key: 'events', label: 'Events', Icon: Art.EventsIcon },
 ];
 
-const SIDE_ITEMS = [
-  { key: 'friends', Icon: IconUser, tone: 'blue' },
-  { key: 'groups', Icon: IconUsers, tone: 'blue' },
-  { key: 'saved', Icon: IconBookmark, tone: 'purple' },
-  { key: 'memories', Icon: IconClock, tone: 'blue' },
-  { key: 'photos', Icon: IconImage, tone: 'green' },
+// shown after pressing "See more"
+const SIDE_MORE = [
+  { key: 'ads', label: 'Ads Manager', Icon: Art.AdsManagerIcon },
+  { key: 'birthdays', label: 'Birthdays', Icon: Art.BirthdaysIcon },
+  { key: 'chatais', label: 'Chat with AIs', Icon: Art.ChatAIsIcon },
+  { key: 'gaming', label: 'Gaming Video', Icon: Art.GamingVideoIcon },
+  { key: 'messenger', label: 'Messenger', Icon: Art.MessengerIcon },
+  { key: 'orders', label: 'Orders and payments', Icon: Art.OrdersIcon },
+  { key: 'pages', label: 'Pages', Icon: Art.PagesIcon },
+  { key: 'playgames', label: 'Play games', Icon: Art.PlayGamesIcon },
+  { key: 'support', label: 'Support', Icon: Art.SupportIcon },
+  { key: 'adactivity', label: 'Your Ad Activity', Icon: Art.AdActivityIcon },
 ];
 
 const featured = [
@@ -158,12 +159,15 @@ export default function Home() {
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
   const [deleteId, setDeleteId] = useState(null);
+  const [hiddenIds, setHiddenIds] = useState({});
+  const [showMore, setShowMore] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [shareTarget, setShareTarget] = useState(null);
   const [shareText, setShareText] = useState('');
   const [sharing, setSharing] = useState(false);
-  const [section, setSection] = useState('feed');
-  const [query, setQuery] = useState('');
+  const loc = useLocation();
+  const [section, setSection] = useState((loc.state && loc.state.section) || 'feed');
+  const [query, setQuery] = useState((loc.state && loc.state.query) || '');
   const notifs = useNotifications();
   const [openComments, setOpenComments] = useState({});
   const [commentsMap, setCommentsMap] = useState({});
@@ -172,7 +176,7 @@ export default function Home() {
   const [composerFile, setComposerFile] = useState(null);
   const [composerPreview, setComposerPreview] = useState(null);
   const chats = useChats();
-  const [openChats, setOpenChats] = useState([]);
+  const [openChats, setOpenChats] = useState(loc.state && loc.state.openChat ? [loc.state.openChat] : []);
   const suppressUntil = useRef(0);
   const openRef = useRef({});
   const fileRef = useRef(null);
@@ -361,6 +365,12 @@ export default function Home() {
     e.target.value = '';
   };
 
+  const openPicker = (accept) => {
+    if (!fileRef.current) return;
+    fileRef.current.accept = accept;
+    fileRef.current.click();
+  };
+
   const insertSymbol = (symbol) => {
     setComposerText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}${symbol}`);
     if (composerRef.current) composerRef.current.focus();
@@ -385,104 +395,18 @@ export default function Home() {
 
   return (
     <div className="home-page">
-      <nav className="home-nav">
-        <div className="nav-left">
-          <div className="nav-logo" title="Phishbook" onClick={() => { setSection('feed'); navigate('/home'); }}>
-            <IconLogoMark />
-          </div>
-          <div className="nav-search">
-            <IconSearch />
-            <input
-              placeholder="Search Phishbook"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="nav-tabs">
-          {NAV_TABS.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              type="button"
-              title={label}
-              className={`nav-tab ${section === key ? 'active' : ''}`}
-              onClick={() => setSection(key)}
-            >
-              <Icon />
-              {key === 'friends' && notifs.pendingRequests > 0 && (
-                <span className="nav-badge">{notifs.pendingRequests > 99 ? '99+' : notifs.pendingRequests}</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        <div className="nav-actions">
-          <NavMenu title="Menu" trigger={<IconGrid />}>
-            {(close) => (
-              <>
-                <div className="notif-panel-head"><h3>Menu</h3></div>
-                <div className="menu-list">
-                  {Object.keys(SECTIONS).map((key) => (
-                    <div key={key} className="menu-row" onClick={() => { setSection(key); close(); }}>
-                      <span className="menu-ico">{SECTIONS[key].charAt(0)}</span>
-                      {SECTIONS[key]}
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </NavMenu>
-
-          <NavMenu
-            title="Messenger"
-            trigger={(
-              <>
-                <IconMessenger />
-                {chats.totalUnread > 0 && (
-                  <span className="nav-badge">{chats.totalUnread > 99 ? '99+' : chats.totalUnread}</span>
-                )}
-              </>
-            )}
-          >
-            {(close) => (
-              <ChatsPanel
-                conversations={chats.conversations}
-                onOpen={(peer) => { openChat(peer); close(); }}
-              />
-            )}
-          </NavMenu>
-
-          <NotificationBell notifs={notifs} onOpenFriends={() => setSection('friends')} />
-
-          <NavMenu
-            title="Account"
-            className="nav-avatar-btn"
-            trigger={(
-              <>
-                <img src={avatarOf(user)} alt={userFullName} />
-                <i className="nav-chev"><IconChevronDown /></i>
-              </>
-            )}
-          >
-            {(close) => (
-              <div className="menu-list">
-                <div className="menu-row profile" onClick={() => { close(); navigate('/profile'); }}>
-                  <img src={avatarOf(user)} alt="" />
-                  <div>
-                    <b>{userFullName}</b>
-                    <small>See your profile</small>
-                  </div>
-                </div>
-                <div className="menu-row" onClick={() => { close(); handleLogout(); }}>
-                  <span className="menu-ico"><IconLogout /></span>
-                  Log out
-                </div>
-              </div>
-            )}
-          </NavMenu>
-        </div>
-      </nav>
+      <TopNav
+        section={section}
+        onSection={setSection}
+        query={query}
+        onQuery={setQuery}
+        notifs={notifs}
+        chats={chats}
+        onOpenChat={openChat}
+        onLogo={() => { setSection('feed'); navigate('/home'); }}
+        onLogout={handleLogout}
+        navigate={navigate}
+      />
 
       <div className="home-body">
         <aside className="sidebar left">
@@ -491,12 +415,20 @@ export default function Home() {
               <img className="side-avatar" src={avatarOf(user)} alt={userFullName} />
               {userFullName}
             </li>
-            {SIDE_ITEMS.map(({ key, Icon, tone }) => (
+            {(showMore ? [...SIDE_MAIN, ...SIDE_MORE] : SIDE_MAIN).map(({ key, label, Icon }) => (
               <li key={key} className={section === key ? 'active' : ''} onClick={() => setSection(key)}>
-                <span className={`side-icon ${tone}`}><Icon /></span>
-                {SECTIONS[key]}
+                <span className="side-icon"><Icon /></span>
+                {label}
               </li>
             ))}
+            <li className="side-toggle" onClick={() => setShowMore((v) => !v)}>
+              <span className="side-icon side-chev">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d={showMore ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              {showMore ? 'See less' : 'See more'}
+            </li>
           </ul>
         </aside>
 
@@ -516,13 +448,34 @@ export default function Home() {
                   onChange={(e) => setComposerText(e.target.value)}
                 />
                 <div className="composer-tools">
-                  <button type="button" title="Add photo or video" onClick={() => fileRef.current && fileRef.current.click()}><IconImage /></button>
-                  <button type="button" title="Mention someone" onClick={() => insertSymbol('@')}><IconUsers /></button>
-                  <button type="button" title="Add hashtag" onClick={() => insertSymbol('#')}>#</button>
+                  <button type="button" title="Add video" onClick={() => openPicker('video/*')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path fill="#f3425f" d="M4.5 5.5h9A2.5 2.5 0 0 1 16 8v8a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 2 16V8a2.5 2.5 0 0 1 2.5-2.5Zm12.8 4.2 4-2.3a.6.6 0 0 1 .9.5v8.2a.6.6 0 0 1-.9.5l-4-2.3Z" />
+                      <circle cx="9" cy="12" r="2.6" fill="#fff" />
+                      <circle cx="9" cy="12" r="1.1" fill="#f3425f" />
+                    </svg>
+                  </button>
+                  <button type="button" title="Add photo" onClick={() => openPicker('image/*')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="#45bd62" />
+                      <circle cx="8.5" cy="9" r="1.9" fill="#fff" />
+                      <path fill="#fff" d="m4.5 18 5-5.2a1 1 0 0 1 1.4 0l1.6 1.6 3.1-3.6a1 1 0 0 1 1.5 0L20 15.2V18Z" />
+                    </svg>
+                  </button>
+                  <button type="button" title="Add emoji" onClick={() => insertSymbol('😊')}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" fill="none" stroke="#f7721e" strokeWidth="2.2" />
+                      <circle cx="8.8" cy="10" r="1.3" fill="#f7721e" />
+                      <circle cx="15.2" cy="10" r="1.3" fill="#f7721e" />
+                      <path d="M7.8 14c1 1.8 2.5 2.6 4.2 2.6s3.2-.8 4.2-2.6" fill="none" stroke="#f7721e" strokeWidth="2.2" strokeLinecap="round" />
+                    </svg>
+                  </button>
                 </div>
-                <button type="submit" className="post-btn" disabled={posting || (!composerText.trim() && !composerFile)}>
-                  {posting ? 'Posting…' : 'Post'}
-                </button>
+                {(composerText.trim() || composerFile) && (
+                  <button type="submit" className="post-btn" disabled={posting}>
+                    {posting ? 'Posting…' : 'Post'}
+                  </button>
+                )}
               </div>
               <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
               {composerPreview && (
@@ -544,15 +497,23 @@ export default function Home() {
             {section === 'feed' && idx === 1 && (
               <div className="feed-ad"><SimAd variant="default" /></div>
             )}
-            <div className="post-card">
+            {hiddenIds[post.id] && (
+              <HiddenPost
+                name={post.user.name}
+                onUndo={() => setHiddenIds((h) => ({ ...h, [post.id]: false }))}
+              />
+            )}
+            <div className="post-card" hidden={!!hiddenIds[post.id]}>
               <div className="post-header">
                 <img className="avatar" src={avatarOf(post.user)} alt={post.user.name} />
                 <div style={{ flex: 1 }}>
                   <div className="post-author link" onClick={() => navigate(`/profile/${post.user.id}`)}>{post.user.name}</div>
                   <div className="post-time">{timeAgo(post.created_at)} &middot; Public</div>
                 </div>
-                {user?.id === post.user.id && (
+                {user?.id === post.user.id ? (
                   <PostMenu onDelete={() => setDeleteId(post.id)} />
+                ) : (
+                  <OtherPostMenu onHide={() => setHiddenIds((h) => ({ ...h, [post.id]: true }))} />
                 )}
               </div>
               {post.body && <p className="post-text">{post.body}</p>}

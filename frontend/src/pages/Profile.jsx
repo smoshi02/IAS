@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
-import { IconLogoMark, IconHome } from '../components/Icons';
+import TopNav from '../components/TopNav';
+import useNotifications from '../hooks/useNotifications';
+import useChats from '../hooks/useChats';
 import { avatarOf, timeAgo } from '../utils/people';
 import '../styles/home.css';
 
@@ -102,11 +104,15 @@ export default function Profile() {
   const [cFile, setCFile] = useState(null);
   const [posting, setPosting] = useState(false);
   const [postErr, setPostErr] = useState('');
+  const [navQuery, setNavQuery] = useState('');
+  const notifs = useNotifications();
+  const chats = useChats();
 
   const pagesRef = useRef(1);
   const avatarInput = useRef(null);
   const coverInput = useRef(null);
   const postInput = useRef(null);
+  const composerInput = useRef(null);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -220,17 +226,34 @@ export default function Profile() {
     }
   };
 
+  // composer shortcuts (Live video / Photo-video / Life update)
+  const openPicker = (accept) => {
+    if (!postInput.current) return;
+    postInput.current.accept = accept;
+    postInput.current.click();
+  };
+  const startLifeUpdate = () => {
+    setComposer((t) => t || 'Life update: ');
+    if (composerInput.current) composerInput.current.focus();
+  };
+
+  // the exact same navbar as the Home page; picking anything there goes back to Home
   const topBar = (
-    <nav className="pf-nav">
-      <div className="pf-nav-left">
-        <span className="pf-logo" onClick={() => navigate('/home')} title="Phishbook"><IconLogoMark /></span>
-        <button type="button" className="pf-home" onClick={() => navigate('/home')}><IconHome /> Home</button>
-      </div>
-      <div className="pf-nav-right">
-        <img className="pf-nav-avatar" src={avatarOf(user, 80)} alt="" onClick={() => navigate('/profile')} />
-        <button type="button" className="fb-btn secondary" onClick={handleLogout}>Log out</button>
-      </div>
-    </nav>
+    <div className="home-page nav-only">
+      <TopNav
+        section=""
+        onSection={(key) => navigate('/home', { state: { section: key } })}
+        query={navQuery}
+        onQuery={setNavQuery}
+        onSearch={() => navigate('/home', { state: { query: navQuery } })}
+        notifs={notifs}
+        chats={chats}
+        onOpenChat={(peer) => navigate('/home', { state: { openChat: peer } })}
+        onLogo={() => navigate('/home')}
+        onLogout={handleLogout}
+        navigate={navigate}
+      />
+    </div>
   );
 
   if (notFound) {
@@ -338,10 +361,18 @@ export default function Profile() {
           <div className="pf-cols">
             <aside className="pf-left">
               <div className="pf-card">
-                <h3>Intro</h3>
+                <h3>Personal details</h3>
                 {p.bio ? <p className="pf-intro-bio">{p.bio}</p> : <p className="pf-muted">{isMe ? 'Add a bio from Edit profile.' : 'No bio yet.'}</p>}
-                <div className="pf-fact">Joined {new Date(p.joined_at).toLocaleDateString([], { month: 'long', year: 'numeric' })}</div>
-                <div className="pf-fact">{data.friends_count} friend{data.friends_count === 1 ? '' : 's'}</div>
+                <div className="pf-detail"><span>Name</span><b>{p.name}</b></div>
+                {isMe && data.me_details && (
+                  <>
+                    <div className="pf-detail"><span>Username</span><b>@{data.me_details.username}</b></div>
+                    <div className="pf-detail"><span>Email</span><b>{data.me_details.email || '—'}</b></div>
+                    <div className="pf-detail"><span>Mobile</span><b>{data.me_details.mobile_number || '—'}</b></div>
+                  </>
+                )}
+                <div className="pf-detail"><span>Joined</span><b>{new Date(p.joined_at).toLocaleDateString([], { month: 'long', year: 'numeric' })}</b></div>
+                <div className="pf-detail"><span>Friends</span><b>{data.friends_count}</b></div>
               </div>
 
               <div className="pf-card">
@@ -378,6 +409,7 @@ export default function Profile() {
                   <div className="pf-composer-row">
                     <img src={avatarOf(user, 80)} alt="" />
                     <input
+                      ref={composerInput}
                       placeholder="What's on your mind?"
                       value={composer}
                       onChange={(e) => setComposer(e.target.value)}
@@ -391,7 +423,30 @@ export default function Profile() {
                   )}
                   {postErr && <div className="post-error">{postErr}</div>}
                   <div className="pf-composer-foot">
-                    <button type="button" className="fb-btn secondary" onClick={() => postInput.current && postInput.current.click()}>Photo/video</button>
+                    <button type="button" className="pf-act" onClick={() => openPicker('video/*')}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#f3425f" d="M4.5 5.5h9A2.5 2.5 0 0 1 16 8v8a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 2 16V8a2.5 2.5 0 0 1 2.5-2.5Zm12.8 4.2 4-2.3a.6.6 0 0 1 .9.5v8.2a.6.6 0 0 1-.9.5l-4-2.3Z" />
+                        <circle cx="9" cy="12" r="2.6" fill="#fff" />
+                        <circle cx="9" cy="12" r="1.1" fill="#f3425f" />
+                      </svg>
+                      Live video
+                    </button>
+                    <button type="button" className="pf-act" onClick={() => openPicker('image/*,video/*')}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="#45bd62" />
+                        <circle cx="8.5" cy="9" r="1.9" fill="#fff" />
+                        <path fill="#fff" d="m4.5 18 5-5.2a1 1 0 0 1 1.4 0l1.6 1.6 3.1-3.6a1 1 0 0 1 1.5 0L20 15.2V18Z" />
+                      </svg>
+                      Photo/video
+                    </button>
+                    <button type="button" className="pf-act" onClick={startLifeUpdate}>
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M5 3v18" stroke="#1b9be8" strokeWidth="2.2" strokeLinecap="round" />
+                        <path fill="#1b9be8" d="M7 4.5c2.800-1.500 4.700 1.500 7.800 0 1.700-.8 3.200-.8 4.700-.2v9.200c-1.500-.6-3-.6-4.700.2-3.100 1.500-5-1.500-7.800 0z" />
+                        <path fill="#6cc4f5" d="M7 4.500c1.800-1 3.200-.4 4.600.2L7 9.500z" />
+                      </svg>
+                      Life update
+                    </button>
                     <input
                       ref={postInput}
                       type="file"
@@ -399,10 +454,12 @@ export default function Profile() {
                       hidden
                       onChange={(e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) setCFile(f); }}
                     />
-                    <button type="submit" className="fb-btn primary" disabled={posting || (!composer.trim() && !cFile)}>
+                  </div>
+                  {(composer.trim() || cFile) && (
+                    <button type="submit" className="fb-btn primary pf-post-submit" disabled={posting}>
                       {posting ? 'Posting…' : 'Post'}
                     </button>
-                  </div>
+                  )}
                 </form>
               )}
 
