@@ -1,37 +1,25 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { IconLogoMark, IconSearch, IconBell, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock, IconThumbsUp, IconComment, IconShare, IconLogout, IconPlus } from '../components/Icons';
+import {
+  IconLogoMark, IconSearch, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock,
+  IconThumbsUp, IconComment, IconShare, IconLogout, IconGrid, IconMessenger, IconChevronDown,
+} from '../components/Icons';
 import SimAd from '../components/SimAd';
 import Stories from '../components/Stories';
-import '../styles/home.css';
+import { Emoji, EmojiStyle } from 'emoji-picker-react';
 import PostMenu from '../components/PostMenu';
+import NavMenu from '../components/NavMenu';
+import NotificationBell, { NotificationToast } from '../components/NotificationBell';
+import FriendsPanel from '../components/FriendsPanel';
+import { ChatsPanel, ChatDock } from '../components/Messenger';
+import useNotifications from '../hooks/useNotifications';
+import useChats from '../hooks/useChats';
+import { avatarOf, timeAgo } from '../utils/people';
+import '../styles/home.css';
 
-
-function avatarUrl(name, bg) {
-  const encoded = encodeURIComponent(name);
-  return `https://ui-avatars.com/api/?name=${encoded}&background=${bg}&color=fff&bold=true&size=128`;
-}
-
-const COLORS = ['2C6BED', '42B72A', 'F0902F', '9b59b6', '16a085'];
-const colorFor = (id) => COLORS[Math.abs(Number(id) || 0) % COLORS.length];
-
-function timeAgo(iso) {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return 'Just now';
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
-
-const stories = [
-  { id: 1, name: 'Maya Santos', color: '2C6BED' },
-  { id: 2, name: 'Jordan Cruz', color: '42B72A' },
-  { id: 3, name: 'Priya Nair', color: 'F0902F' },
-];
+const POLL_MS = 4000;
 
 const SECTIONS = {
   feed: 'Home',
@@ -51,23 +39,16 @@ const NAV_TABS = [
 ];
 
 const SIDE_ITEMS = [
-  { key: 'friends', Icon: IconUser },
-  { key: 'groups', Icon: IconUsers },
-  { key: 'saved', Icon: IconBookmark },
-  { key: 'memories', Icon: IconClock },
-  { key: 'photos', Icon: IconImage },
+  { key: 'friends', Icon: IconUser, tone: 'blue' },
+  { key: 'groups', Icon: IconUsers, tone: 'blue' },
+  { key: 'saved', Icon: IconBookmark, tone: 'purple' },
+  { key: 'memories', Icon: IconClock, tone: 'blue' },
+  { key: 'photos', Icon: IconImage, tone: 'green' },
 ];
 
 const featured = [
   { id: 1, title: 'Capstone Showcase', sub: 'Dec 5 · Main Hall', color: '2C6BED' },
   { id: 2, title: 'Web Security Workshop', sub: 'Friday · Room 204', color: 'F0902F' },
-];
-
-const contacts = [
-  { id: 1, name: 'Alex Rivera', color: '9b59b6' },
-  { id: 2, name: 'Sam Oduya', color: 'e67e22' },
-  { id: 3, name: 'Lin Zhao', color: '16a085' },
-  { id: 4, name: 'Maya Santos', color: '2C6BED' },
 ];
 
 const TOAST_DELAY = 6000;
@@ -128,6 +109,20 @@ const REACTIONS = [
 ];
 const reactionOf = (k) => REACTIONS.find((r) => r.key === k);
 
+// Facebook-style emoji image for a plain emoji character
+function FbEmoji({ char, size = 22 }) {
+  if (!char) return null;
+  return (
+    <span className="fbe">
+      <Emoji
+        unified={Array.from(char).map((c) => c.codePointAt(0).toString(16)).join('-')}
+        size={size}
+        emojiStyle={EmojiStyle.FACEBOOK}
+      />
+    </span>
+  );
+}
+
 function ReactionButton({ post, onReact }) {
   const mine = reactionOf(post.my_reaction);
   return (
@@ -135,7 +130,7 @@ function ReactionButton({ post, onReact }) {
       <div className="react-picker">
         {REACTIONS.map((r) => (
           <button type="button" key={r.key} title={r.label} onClick={() => onReact(post.id, r.key)}>
-            {r.emoji}
+            <FbEmoji char={r.emoji} size={30} />
           </button>
         ))}
       </div>
@@ -143,7 +138,7 @@ function ReactionButton({ post, onReact }) {
         onClick={() => onReact(post.id, post.my_reaction || 'like')}
         style={mine ? { color: mine.color, fontWeight: 700 } : undefined}
       >
-        {mine ? <>{mine.emoji} {mine.label}</> : <><IconThumbsUp /> Like</>}
+        {mine ? <><FbEmoji char={mine.emoji} size={18} /> {mine.label}</> : <><IconThumbsUp /> Like</>}
       </span>
     </div>
   );
@@ -166,16 +161,17 @@ export default function Home() {
   const [sharing, setSharing] = useState(false);
   const [section, setSection] = useState('feed');
   const [query, setQuery] = useState('');
-  const [showNotifs, setShowNotifs] = useState(false);
+  const notifs = useNotifications();
   const [openComments, setOpenComments] = useState({});
   const [commentsMap, setCommentsMap] = useState({});
   const [commentDraft, setCommentDraft] = useState({});
   const [composerText, setComposerText] = useState('');
   const [composerFile, setComposerFile] = useState(null);
   const [composerPreview, setComposerPreview] = useState(null);
-  const [chat, setChat] = useState(null);
-  const [chatLog, setChatLog] = useState({});
-  const [chatDraft, setChatDraft] = useState('');
+  const chats = useChats();
+  const [openChats, setOpenChats] = useState([]);
+  const suppressUntil = useRef(0);
+  const openRef = useRef({});
   const fileRef = useRef(null);
   const composerRef = useRef(null);
 
@@ -196,6 +192,58 @@ export default function Home() {
 
   useEffect(() => { loadPosts(1); }, []);
 
+  useEffect(() => { openRef.current = openComments; }, [openComments]);
+
+  // Live feed: every few seconds pull page 1 and merge it in, so reactions,
+  // comment counts, new posts and deletions from other accounts show up
+  // without a refresh. Open comment sections are refreshed too.
+  const syncFeed = useCallback(async () => {
+    if (Date.now() < suppressUntil.current) return;
+    try {
+      const { data } = await api.get('/posts', { params: { page: 1 } });
+      const openIds = Object.keys(openRef.current).filter((k) => openRef.current[k]);
+      const commentResults = await Promise.all(
+        openIds.map((id) => api.get(`/posts/${id}/comments`).then((r) => [id, r.data]).catch(() => null)),
+      );
+      if (Date.now() < suppressUntil.current) return; // you just acted; don't overwrite it
+
+      const fresh = data.data;
+      setPosts((prev) => {
+        const freshMap = new Map(fresh.map((p) => [p.id, p]));
+        const minFresh = fresh.length ? Math.min(...fresh.map((p) => p.id)) : Infinity;
+        const complete = data.last_page <= 1;
+        const known = new Set(prev.map((p) => p.id));
+        const kept = prev
+          .filter((p) => freshMap.has(p.id) || !(complete || p.id >= minFresh)) // drop deleted posts
+          .map((p) => freshMap.get(p.id) || p);                                  // refresh the rest
+        const added = fresh.filter((p) => !known.has(p.id));                      // brand-new posts
+        return added.length ? [...added, ...kept] : kept;
+      });
+
+      setCommentsMap((prev) => {
+        const next = { ...prev };
+        commentResults.forEach((r) => { if (r) next[r[0]] = r[1]; });
+        return next;
+      });
+    } catch (e) {
+      /* try again next tick */
+    }
+  }, []);
+
+  useEffect(() => {
+    const wake = () => { if (document.visibilityState === 'visible') syncFeed(); };
+    const id = setInterval(wake, POLL_MS);
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', wake);
+      window.removeEventListener('focus', wake);
+    };
+  }, [syncFeed]);
+
+  const holdSync = () => { suppressUntil.current = Date.now() + 1500; };
+
   const handleLogout = async () => {
     try { await api.post('/logout'); } catch (e) { /* ignore */ }
     logout();
@@ -207,6 +255,7 @@ export default function Home() {
   };
 
   const react = async (id, type = 'like') => {
+    holdSync();
     try {
       const { data } = await api.post(`/posts/${id}/like`, { type });
       updatePost(id, { my_reaction: data.my_reaction, likes_count: data.likes_count, reactions: data.reactions });
@@ -227,6 +276,7 @@ export default function Home() {
   const submitComment = async (id) => {
     const text = (commentDraft[id] || '').trim();
     if (!text) return;
+    holdSync();
     try {
       const { data } = await api.post(`/posts/${id}/comments`, { body: text });
       setCommentsMap((prev) => ({ ...prev, [id]: [...(prev[id] || []), data] }));
@@ -246,6 +296,7 @@ export default function Home() {
     if (!shareTarget) return;
     const post = shareTarget;
     setSharing(true);
+    holdSync();
     try {
       const body = shareText.trim();
       const { data } = await api.post(`/posts/${post.id}/share`, body ? { body } : {});
@@ -260,6 +311,7 @@ export default function Home() {
   const confirmDelete = async () => {
     if (deleteId === null) return;
     setDeleting(true);
+    holdSync();
     try {
       await api.delete(`/posts/${deleteId}`);
       setPosts((prev) => prev.filter((p) => p.id !== deleteId));
@@ -280,6 +332,7 @@ export default function Home() {
     if ((!text && !composerFile) || posting) return;
     setPosting(true);
     setPostError('');
+    holdSync();
     const fd = new FormData();
     if (text) fd.append('body', text);
     if (composerFile) fd.append('media', composerFile);
@@ -310,15 +363,11 @@ export default function Home() {
     if (composerRef.current) composerRef.current.focus();
   };
 
-  const openChat = (contact) => { setChat(contact); setChatDraft(''); };
-
-  const sendChat = (e) => {
-    e.preventDefault();
-    const text = chatDraft.trim();
-    if (!text || !chat) return;
-    setChatLog((prev) => ({ ...prev, [chat.id]: [...(prev[chat.id] || []), text] }));
-    setChatDraft('');
+  // open a chat window (max 2 docked at once)
+  const openChat = (peer) => {
+    setOpenChats((prev) => [...prev.filter((p) => p.id !== peer.id), { id: peer.id, name: peer.name, avatar: peer.avatar }].slice(-2));
   };
+  const closeChat = (id) => setOpenChats((prev) => prev.filter((p) => p.id !== id));
 
   const visiblePosts = useMemo(() => {
     let list = posts;
@@ -335,7 +384,7 @@ export default function Home() {
     <div className="home-page">
       <nav className="home-nav">
         <div className="nav-left">
-          <div className="nav-logo" onClick={() => { setSection('feed'); navigate('/home'); }}>
+          <div className="nav-logo" title="Phishbook" onClick={() => { setSection('feed'); navigate('/home'); }}>
             <IconLogoMark />
           </div>
           <div className="nav-search">
@@ -358,23 +407,77 @@ export default function Home() {
               onClick={() => setSection(key)}
             >
               <Icon />
+              {key === 'friends' && notifs.pendingRequests > 0 && (
+                <span className="nav-badge">{notifs.pendingRequests > 99 ? '99+' : notifs.pendingRequests}</span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="nav-actions">
-          <button type="button" title="Notifications" className="nav-circle" onClick={() => setShowNotifs((v) => !v)}>
-            <IconBell />
-            {showNotifs && (
-              <div className="notif-dropdown" onClick={(e) => e.stopPropagation()}>
-                <div className="notif-item">Jordan Cruz commented on your post.</div>
-                <div className="notif-item">Priya Nair liked your post.</div>
-                <div className="notif-item">You have 2 new friend suggestions.</div>
+          <NavMenu title="Menu" trigger={<IconGrid />}>
+            {(close) => (
+              <>
+                <div className="notif-panel-head"><h3>Menu</h3></div>
+                <div className="menu-list">
+                  {Object.keys(SECTIONS).map((key) => (
+                    <div key={key} className="menu-row" onClick={() => { setSection(key); close(); }}>
+                      <span className="menu-ico">{SECTIONS[key].charAt(0)}</span>
+                      {SECTIONS[key]}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </NavMenu>
+
+          <NavMenu
+            title="Messenger"
+            trigger={(
+              <>
+                <IconMessenger />
+                {chats.totalUnread > 0 && (
+                  <span className="nav-badge">{chats.totalUnread > 99 ? '99+' : chats.totalUnread}</span>
+                )}
+              </>
+            )}
+          >
+            {(close) => (
+              <ChatsPanel
+                conversations={chats.conversations}
+                onOpen={(peer) => { openChat(peer); close(); }}
+              />
+            )}
+          </NavMenu>
+
+          <NotificationBell notifs={notifs} onOpenFriends={() => setSection('friends')} />
+
+          <NavMenu
+            title="Account"
+            className="nav-avatar-btn"
+            trigger={(
+              <>
+                <img src={avatarOf(user)} alt={userFullName} />
+                <i className="nav-chev"><IconChevronDown /></i>
+              </>
+            )}
+          >
+            {(close) => (
+              <div className="menu-list">
+                <div className="menu-row profile" onClick={() => { close(); navigate('/profile'); }}>
+                  <img src={avatarOf(user)} alt="" />
+                  <div>
+                    <b>{userFullName}</b>
+                    <small>See your profile</small>
+                  </div>
+                </div>
+                <div className="menu-row" onClick={() => { close(); handleLogout(); }}>
+                  <span className="menu-ico"><IconLogout /></span>
+                  Log out
+                </div>
               </div>
             )}
-          </button>
-          <button type="button" title="Profile" className="nav-circle" onClick={() => navigate('/profile')}><IconUser /></button>
-          <button type="button" title="Logout" className="nav-circle" onClick={handleLogout}><IconLogout /></button>
+          </NavMenu>
         </div>
       </nav>
 
@@ -382,12 +485,12 @@ export default function Home() {
         <aside className="sidebar left">
           <ul>
             <li onClick={() => navigate('/profile')}>
-              <img className="side-avatar" src={avatarUrl(userFullName, '2C6BED')} alt={userFullName} />
+              <img className="side-avatar" src={avatarOf(user)} alt={userFullName} />
               {userFullName}
             </li>
-            {SIDE_ITEMS.map(({ key, Icon }) => (
+            {SIDE_ITEMS.map(({ key, Icon, tone }) => (
               <li key={key} className={section === key ? 'active' : ''} onClick={() => setSection(key)}>
-                <span className="side-icon"><Icon /></span>
+                <span className={`side-icon ${tone}`}><Icon /></span>
                 {SECTIONS[key]}
               </li>
             ))}
@@ -397,10 +500,14 @@ export default function Home() {
         <main className="feed">
           <h2 className="feed-heading">{SECTIONS[section]}</h2>
 
+          {section === 'friends' && (
+            <FriendsPanel query={query} tick={notifs.tick} onChange={notifs.refresh} />
+          )}
+
           {section === 'feed' && (
             <form className="create-post" onSubmit={submitNewPost}>
               <div className="composer-row">
-                <img className="avatar" src={avatarUrl(userFullName, '2C6BED')} alt={userFullName} />
+                <img className="avatar" src={avatarOf(user)} alt={userFullName} />
                 <input
                   ref={composerRef}
                   placeholder={`What's on your mind, ${user?.first_name || ''}?`}
@@ -438,9 +545,9 @@ export default function Home() {
             )}
             <div className="post-card">
               <div className="post-header">
-                <img className="avatar" src={avatarUrl(post.user.name, colorFor(post.user.id))} alt={post.user.name} />
+                <img className="avatar" src={avatarOf(post.user)} alt={post.user.name} />
                 <div style={{ flex: 1 }}>
-                  <div className="post-author">{post.user.name}</div>
+                  <div className="post-author link" onClick={() => navigate(`/profile/${post.user.id}`)}>{post.user.name}</div>
                   <div className="post-time">{timeAgo(post.created_at)} &middot; Public</div>
                 </div>
                 {user?.id === post.user.id && (
@@ -452,7 +559,7 @@ export default function Home() {
               {post.shared && (
                 <div className="shared-post">
                   <div className="post-header">
-                    <img className="avatar" src={avatarUrl(post.shared.user.name, colorFor(post.shared.user.id))} alt={post.shared.user.name} />
+                    <img className="avatar" src={avatarOf(post.shared.user)} alt={post.shared.user.name} />
                     <div>
                       <div className="post-author">{post.shared.user.name}</div>
                       <div className="post-time">{timeAgo(post.shared.created_at)}</div>
@@ -466,7 +573,7 @@ export default function Home() {
               {post.likes_count > 0 && (
                 <div className="reaction-summary">
                   {Object.keys(post.reactions || {}).map((k) => (
-                    <span key={k}>{reactionOf(k)?.emoji}</span>
+                    <span key={k}><FbEmoji char={reactionOf(k)?.emoji} size={18} /></span>
                   ))}{' '}
                   {post.likes_count}
                 </div>
@@ -506,7 +613,7 @@ export default function Home() {
             <button type="button" className="post-btn load-more" onClick={() => loadPosts(page + 1)}>Load more</button>
           )}
 
-          {!loading && visiblePosts.length === 0 && (
+          {!loading && visiblePosts.length === 0 && section !== 'friends' && (
             <div className="empty-state">Nothing here yet.</div>
           )}
         </main>
@@ -524,17 +631,22 @@ export default function Home() {
           ))}
           <hr className="side-divider" />
           <h4>Contacts</h4>
-          <ul className="contact-list">
-            {contacts.map((c) => (
-              <li key={c.id} onClick={() => openChat(c)}>
-                <span className="contact-avatar">
-                  <img className="avatar" src={avatarUrl(c.name, c.color)} alt={c.name} />
-                  <i className="online-dot" />
-                </span>
-                {c.name}
-              </li>
-            ))}
-          </ul>
+          {chats.conversations.length === 0 ? (
+            <div className="contact-empty">Add friends to start chatting.</div>
+          ) : (
+            <ul className="contact-list">
+              {chats.conversations.map((c) => (
+                <li key={c.user.id} onClick={() => openChat(c.user)}>
+                  <span className="contact-avatar">
+                    <img className="avatar" src={avatarOf(c.user)} alt={c.user.name} />
+                    {c.online && <i className="online-dot" />}
+                  </span>
+                  {c.user.name}
+                  {c.unread > 0 && <span className="contact-unread" />}
+                </li>
+              ))}
+            </ul>
+          )}
           <h4>Trending Topics</h4>
           <ul>
             <li onClick={() => setQuery('cybersecurity')}>#CyberSecurityClass</li>
@@ -588,25 +700,13 @@ export default function Home() {
 
       <AdToast onOpen={() => navigate('/sim/ad-landing')} />
 
-      <div className="chat-dock">
-        {chat && (
-          <div className="chat-window">
-            <div className="chat-head">
-              <img className="avatar" src={avatarUrl(chat.name, chat.color)} alt={chat.name} />
-              <span>{chat.name}</span>
-              <button type="button" onClick={() => setChat(null)} aria-label="Close chat">&times;</button>
-            </div>
-            <div className="chat-body">
-              {(chatLog[chat.id] || []).length === 0 && <div className="chat-empty">Say hi to {chat.name.split(' ')[0]}.</div>}
-              {(chatLog[chat.id] || []).map((m, i) => <div className="chat-msg" key={i}>{m}</div>)}
-            </div>
-            <form className="chat-input" onSubmit={sendChat}>
-              <input placeholder="Aa" value={chatDraft} onChange={(e) => setChatDraft(e.target.value)} />
-              <button type="submit" disabled={!chatDraft.trim()}>Send</button>
-            </form>
-          </div>
-        )}
-      </div>
+      <NotificationToast
+        toast={notifs.toast}
+        onClose={notifs.dismissToast}
+        onOpen={(n) => { if (!n.read) notifs.markRead(n.id); setSection('friends'); }}
+      />
+
+      <ChatDock peers={openChats} conversations={chats.conversations} onClose={closeChat} onSeen={chats.refresh} />
     </div>
   );
 }

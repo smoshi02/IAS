@@ -21,14 +21,14 @@ class StoryController extends Controller
         $uid = $r->user()->id;
 
         return Story::where('expires_at', '>', now())
-            ->with(['user:id,first_name,last_name', 'reactions:id,story_id,user_id,type'])
+            ->with(['user:id,first_name,last_name,avatar_path', 'reactions:id,story_id,user_id,type'])
             ->oldest()
             ->get()
             ->groupBy('user_id')
             ->map(function ($items) use ($uid) {
                 $u = $items->first()->user;
                 return [
-                    'user'    => ['id' => $u->id, 'name' => $this->fullName($u)],
+                    'user'    => ['id' => $u->id, 'name' => $this->fullName($u), 'avatar' => $u->avatar_url],
                     'stories' => $items->map(fn ($s) => [
                         'id'              => $s->id,
                         'media_url'       => asset('storage/' . $s->media_path),
@@ -37,6 +37,10 @@ class StoryController extends Controller
                         'filter'          => $s->filter,
                         'text_color'      => $s->text_color,
                         'text_pos'        => $s->text_pos,
+                        'alt_text'        => $s->alt_text,
+                        'ai_label'        => (bool) $s->ai_label,
+                        'zoom'            => (float) ($s->zoom ?? 1),
+                        'rotation'        => (int) ($s->rotation ?? 0),
                         'created_at'      => $s->created_at->toIso8601String(),
                         'my_reaction'     => optional($s->reactions->firstWhere('user_id', $uid))->type,
                         'reactions'       => $s->reactions->groupBy('type')->map(fn ($g) => $g->count()),
@@ -56,6 +60,10 @@ class StoryController extends Controller
             'filter'     => 'nullable|in:none,mono,warm,cool,vivid,fade',
             'text_color' => 'nullable|in:white,black,yellow,pink,blue',
             'text_pos'   => 'nullable|in:top,center,bottom',
+            'alt_text'   => 'nullable|string|max:200',
+            'ai_label'   => 'nullable|in:0,1,true,false',
+            'zoom'       => 'nullable|numeric|min:0.5|max:3',
+            'rotation'   => 'nullable|in:0,90,180,270',
         ]);
 
         $f = $r->file('media');
@@ -67,6 +75,10 @@ class StoryController extends Controller
             'filter'     => $r->input('filter') ?: 'none',
             'text_color' => $r->input('text_color') ?: 'white',
             'text_pos'   => $r->input('text_pos') ?: 'bottom',
+            'alt_text'   => $r->input('alt_text'),
+            'ai_label'   => $r->boolean('ai_label'),
+            'zoom'       => $r->filled('zoom') ? (float) $r->input('zoom') : 1,
+            'rotation'   => (int) $r->input('rotation', 0),
             'expires_at' => now()->addHours(24),
         ]);
 
@@ -75,7 +87,7 @@ class StoryController extends Controller
 
     public function react(Request $r, Story $story)
     {
-        $r->validate(['type' => 'required|in:like,love,haha,wow,sad,angry']);
+        $r->validate(['type' => 'required|in:like,love,care,haha,wow,sad,angry']);
         abort_if($story->expires_at->isPast(), 404);
 
         $type = $r->input('type');

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
@@ -20,8 +21,30 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // merge new fields into the logged-in user (e.g. a new profile photo)
+  const updateUser = (patch) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      try { localStorage.setItem('phishbook_user', JSON.stringify(next)); } catch (e) { /* ignore */ }
+      return next;
+    });
+  };
+
+  // pick up changes made on another device / tab (profile photo, bio)
+  useEffect(() => {
+    if (!localStorage.getItem('phishbook_token')) return;
+    api.get('/me')
+      .then(({ data }) => {
+        if (data && data.id) {
+          updateUser({ avatar_url: data.avatar_url, cover_url: data.cover_url, bio: data.bio });
+        }
+      })
+      .catch(() => { /* ignore */ });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

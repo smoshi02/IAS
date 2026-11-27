@@ -24,6 +24,9 @@ class User extends Authenticatable
         'account_type',
         'status',
         'terms_accepted_at',
+        'avatar_path',
+        'cover_path',
+        'bio',
     ];
 
     protected $hidden = [
@@ -35,6 +38,21 @@ class User extends Authenticatable
         'birthday' => 'date:Y-m-d',
         'terms_accepted_at' => 'datetime',
     ];
+
+    // login and /me now also return the photo URLs
+    protected $appends = ['avatar_url', 'cover_url'];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        $p = $this->attributes['avatar_path'] ?? null;
+        return $p ? asset('storage/' . $p) : null;
+    }
+
+    public function getCoverUrlAttribute(): ?string
+    {
+        $p = $this->attributes['cover_path'] ?? null;
+        return $p ? asset('storage/' . $p) : null;
+    }
 
     public function loginActivities()
     {

@@ -99,3 +99,27 @@ export const IconStoreFilled = (p) => (
     <path d="M2.5 10l1.6-5h15.8l1.6 5a2.5 2.5 0 01-5 .5 2.5 2.5 0 01-5 0 2.5 2.5 0 01-5 0 2.5 2.5 0 01-5-.5z" />
   </svg>
 );
+export const IconUserPlus = (p) => (
+  <svg {...base} {...p}><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5" /><path d="M19 8v6M16 11h6" /></svg>
+);
+export const IconUserCheck = (p) => (
+  <svg {...base} {...p}><circle cx="9" cy="8" r="4" /><path d="M2 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5" /><path d="M16 11.5l2 2 4-4" /></svg>
+);
+
+export const IconGrid = (p) => (
+  <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" {...p}>
+    {[5, 12, 19].flatMap((cx) => [5, 12, 19].map((cy) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="1.9" />))}
+  </svg>
+);
+export const IconMessenger = (p) => (
+  <svg viewBox="0 0 24 24" width={20} height={20} {...p}>
+    <path d="M12 2C6.5 2 2 6.2 2 11.4c0 2.9 1.4 5.5 3.7 7.2V22l3.4-1.9c.9.3 1.9.4 2.9.4 5.5 0 10-4.2 10-9.5S17.5 2 12 2z" fill="currentColor" />
+    <path d="M6.3 14l4-4.2 2.5 2.4 4.9-2.8" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </svg>
+);
+export const IconChevronDown = (p) => (
+  <svg {...base} {...p}><path d="M6 9l6 6 6-6" /></svg>
+);
+export const IconSend = (p) => (
+  <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" {...p}><path d="M2.5 20.5l19-8.5-19-8.5v6.6l13 1.9-13 1.9z" /></svg>
+);

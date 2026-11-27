@@ -20,8 +20,8 @@ class PostController extends Controller
     private function query()
     {
         return Post::with([
-                'user:id,first_name,last_name',
-                'sharedPost.user:id,first_name,last_name',
+                'user:id,first_name,last_name,avatar_path',
+                'sharedPost.user:id,first_name,last_name,avatar_path',
                 'likes:id,post_id,user_id,type',
             ])
             ->withCount(['comments', 'shares']);
@@ -37,7 +37,7 @@ class PostController extends Controller
             'media_url'      => $p->media_path ? asset('storage/' . $p->media_path) : null,
             'media_type'     => $p->media_type,
             'created_at'     => $p->created_at->toIso8601String(),
-            'user'           => ['id' => $p->user->id, 'name' => $this->fullName($p->user)],
+            'user'           => ['id' => $p->user->id, 'name' => $this->fullName($p->user), 'avatar' => $p->user->avatar_url],
             'likes_count'    => $likes->count(),
             'reactions'      => $likes->groupBy('type')->map(fn ($g) => $g->count()),
             'my_reaction'    => optional($likes->firstWhere('user_id', $uid))->type,
@@ -53,14 +53,18 @@ class PostController extends Controller
             'id'         => $c->id,
             'body'       => $c->body,
             'created_at' => $c->created_at->toIso8601String(),
-            'user'       => ['id' => $c->user->id, 'name' => $this->fullName($c->user)],
+            'user'       => ['id' => $c->user->id, 'name' => $this->fullName($c->user), 'avatar' => $c->user->avatar_url],
         ];
     }
 
     public function index(Request $r)
     {
         $uid  = $r->user()->id;
-        $page = $this->query()->latest()->paginate(10);
+                $q = $this->query()->latest();
+        if ($r->filled('user_id')) {
+            $q->where('user_id', (int) $r->query('user_id'));
+        }
+        $page = $q->paginate(10);
         $page->getCollection()->transform(fn ($p) => $this->fmt($p, $uid));
         return $page;
     }
@@ -129,7 +133,7 @@ class PostController extends Controller
 
     public function comments(Post $post)
     {
-        return $post->comments()->with('user:id,first_name,last_name')->oldest()->get()
+        return $post->comments()->with('user:id,first_name,last_name,avatar_path')->oldest()->get()
             ->map(fn ($c) => $this->fmtComment($c));
     }
 
@@ -137,7 +141,7 @@ class PostController extends Controller
     {
         $r->validate(['body' => 'required|string|max:1000']);
         $c = Comment::create(['user_id' => $r->user()->id, 'post_id' => $post->id, 'body' => $r->body]);
-        $c->load('user:id,first_name,last_name');
+        $c->load('user:id,first_name,last_name,avatar_path');
         return response()->json($this->fmtComment($c), 201);
     }
 

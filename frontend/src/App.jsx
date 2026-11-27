@@ -29,6 +29,7 @@ export default function App() {
 
           <Route path="/home" element={<RequireUser><Home /></RequireUser>} />
           <Route path="/profile" element={<RequireUser><Profile /></RequireUser>} />
+          <Route path="/profile/:id" element={<RequireUser><Profile /></RequireUser>} />
           <Route path="/sim/ad-landing" element={<AdLanding />} />
 
           <Route path="/admin/login" element={<AdminLogin />} />
