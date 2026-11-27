@@ -106,7 +106,7 @@ class PostController extends Controller
 
     public function like(Request $r, Post $post)
     {
-        $r->validate(['type' => 'nullable|in:like,love,haha,wow,sad,angry']);
+        $r->validate(['type' => 'nullable|in:like,love,care,haha,wow,sad,angry']);
         $type = $r->input('type', 'like');
         $uid  = $r->user()->id;
 

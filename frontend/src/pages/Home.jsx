@@ -4,11 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import {
   IconLogoMark, IconSearch, IconUsers, IconUser, IconHome, IconImage, IconBookmark, IconClock,
-  IconThumbsUp, IconComment, IconShare, IconLogout, IconGrid, IconMessenger, IconChevronDown,
+  IconLogout, IconGrid, IconMessenger, IconChevronDown,
 } from '../components/Icons';
 import SimAd from '../components/SimAd';
 import Stories from '../components/Stories';
-import { Emoji, EmojiStyle } from 'emoji-picker-react';
+import ReactionIcon from '../components/ReactionIcons';
 import PostMenu from '../components/PostMenu';
 import NavMenu from '../components/NavMenu';
 import NotificationBell, { NotificationToast } from '../components/NotificationBell';
@@ -100,28 +100,29 @@ function PostMedia({ post }) {
 }
 
 const REACTIONS = [
-  { key: 'like',  emoji: '👍', label: 'Like',  color: '#1877f2' },
-  { key: 'love',  emoji: '❤️', label: 'Love',  color: '#f33e58' },
-  { key: 'haha',  emoji: '😆', label: 'Haha',  color: '#f7b125' },
-  { key: 'wow',   emoji: '😮', label: 'Wow',   color: '#f7b125' },
-  { key: 'sad',   emoji: '😢', label: 'Sad',   color: '#f7b125' },
-  { key: 'angry', emoji: '😡', label: 'Angry', color: '#e9710f' },
+  { key: 'like',  label: 'Like',  color: '#1877f2' },
+  { key: 'love',  label: 'Love',  color: '#f33e58' },
+  { key: 'care',  label: 'Care',  color: '#f7b125' },
+  { key: 'haha',  label: 'Haha',  color: '#f7b125' },
+  { key: 'wow',   label: 'Wow',   color: '#f7b125' },
+  { key: 'sad',   label: 'Sad',   color: '#f7b125' },
+  { key: 'angry', label: 'Angry', color: '#e9710f' },
 ];
 const reactionOf = (k) => REACTIONS.find((r) => r.key === k);
 
-// Facebook-style emoji image for a plain emoji character
-function FbEmoji({ char, size = 22 }) {
-  if (!char) return null;
-  return (
-    <span className="fbe">
-      <Emoji
-        unified={Array.from(char).map((c) => c.codePointAt(0).toString(16)).join('-')}
-        size={size}
-        emojiStyle={EmojiStyle.FACEBOOK}
-      />
-    </span>
-  );
-}
+const act = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const IconLikeO = () => (
+  <svg {...act}>
+    <rect x="2.6" y="10.6" width="4.9" height="10.8" rx="1.3" />
+    <path d="M7.5 11.4L11.2 3.8a1.8 1.8 0 0 1 3.3 1L13.9 9.5h5.7a1.9 1.9 0 0 1 1.8 2.5l-1.8 7.3a1.9 1.9 0 0 1-1.8 1.4H7.5" />
+  </svg>
+);
+const IconCommentO = () => (
+  <svg {...act}><path d="M18.6 16.2L20.4 20.2L15.4 18.9A8.6 8.6 0 1 1 18.6 16.2Z" /></svg>
+);
+const IconForward = () => (
+  <svg {...act}><path d="M21.2 9.7L14.4 3.6V7C8 7.3 3.4 11.2 2.6 17.8C5.6 13.9 9.6 12.8 14.4 12.9V16.3Z" /></svg>
+);
 
 function ReactionButton({ post, onReact }) {
   const mine = reactionOf(post.my_reaction);
@@ -130,15 +131,17 @@ function ReactionButton({ post, onReact }) {
       <div className="react-picker">
         {REACTIONS.map((r) => (
           <button type="button" key={r.key} title={r.label} onClick={() => onReact(post.id, r.key)}>
-            <FbEmoji char={r.emoji} size={30} />
+            <ReactionIcon type={r.key} size={42} />
           </button>
         ))}
       </div>
       <span
+        className="pb-btn"
         onClick={() => onReact(post.id, post.my_reaction || 'like')}
-        style={mine ? { color: mine.color, fontWeight: 700 } : undefined}
+        title={mine ? mine.label : 'Like'}
       >
-        {mine ? <><FbEmoji char={mine.emoji} size={18} /> {mine.label}</> : <><IconThumbsUp /> Like</>}
+        {mine ? <ReactionIcon type={mine.key} size={26} /> : <IconLikeO />}
+        {post.likes_count > 0 && <em>{post.likes_count}</em>}
       </span>
     </div>
   );
@@ -498,8 +501,6 @@ export default function Home() {
         </aside>
 
         <main className="feed">
-          <h2 className="feed-heading">{SECTIONS[section]}</h2>
-
           {section === 'friends' && (
             <FriendsPanel query={query} tick={notifs.tick} onChange={notifs.refresh} />
           )}
@@ -570,23 +571,24 @@ export default function Home() {
                 </div>
               )}
 
-              {post.likes_count > 0 && (
-                <div className="reaction-summary">
-                  {Object.keys(post.reactions || {}).map((k) => (
-                    <span key={k}><FbEmoji char={reactionOf(k)?.emoji} size={18} /></span>
-                  ))}{' '}
-                  {post.likes_count}
+              <div className="post-bar">
+                <div className="pb-left">
+                  <ReactionButton post={post} onReact={react} />
+                  <span className="pb-btn" title="Comment" onClick={() => toggleComments(post.id)}>
+                    <IconCommentO />
+                    {post.comments_count > 0 && <em>{post.comments_count}</em>}
+                  </span>
+                  <span className="pb-btn" title="Share" onClick={() => { setShareText(''); setShareTarget(post); }}>
+                    <IconForward />
+                  </span>
                 </div>
-              )}
-
-              <div className="post-actions">
-                <ReactionButton post={post} onReact={react} />
-                <span onClick={() => toggleComments(post.id)}>
-                  <IconComment /> Comment ({post.comments_count})
-                </span>
-                <span onClick={() => { setShareText(''); setShareTarget(post); }}>
-                  <IconShare /> Share ({post.shares_count})
-                </span>
+                {post.likes_count > 0 && (
+                  <div className="pb-stack">
+                    {Object.keys(post.reactions || {}).map((k) => (
+                      <span key={k} title={reactionOf(k)?.label}><ReactionIcon type={k} size={22} /></span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {openComments[post.id] && (
