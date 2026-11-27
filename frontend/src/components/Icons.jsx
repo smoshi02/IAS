@@ -66,17 +66,14 @@ export const IconPlus = (p) => (
   <svg {...base} {...p}><path d="M12 5v14M5 12h14" /></svg>
 );
 export const IconLogoMark = (p) => (
-  <svg viewBox="0 0 32 32" width={28} height={28} {...p}>
-    <rect width="32" height="32" rx="9" fill="url(#g)" />
-    <path d="M11 22V13.5a5 5 0 015-5h2" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" />
-    <circle cx="20" cy="9.5" r="2.1" fill="#fff" />
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="32" y2="32">
-        <stop offset="0" stopColor="#2C6BED" />
-        <stop offset="1" stopColor="#1C3FAE" />
-      </linearGradient>
-    </defs>
-  </svg>
+  <img
+    className="logo-mark"
+    src={`${process.env.PUBLIC_URL}/logo.png`}
+    alt="Phishbook"
+    width={28}
+    height={28}
+    {...p}
+  />
 );
 export const IconArrowLeft = (p) => (
   <svg {...base} {...p}><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
@@ -123,3 +120,4 @@ export const IconChevronDown = (p) => (
 export const IconSend = (p) => (
   <svg viewBox="0 0 24 24" width={20} height={20} fill="currentColor" {...p}><path d="M2.5 20.5l19-8.5-19-8.5v6.6l13 1.9-13 1.9z" /></svg>
 );
+

@@ -1,0 +1,82 @@
+/* ---- live suggestions under the navbar search box ---- */
+.nav-search .sb-pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 80; width: min(360px, 92vw);
+  background: #fff; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.28); padding: 8px;
+  max-height: 70vh; overflow-y: auto;
+}
+.nav-search .sb-pop h6 { margin: 10px 8px 4px; font-size: 13px; font-weight: 700; color: #65676b; text-transform: uppercase; letter-spacing: .02em; }
+.nav-search .sb-row {
+  width: 100%; border: 0; background: none; text-align: left; padding: 8px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; font: inherit; font-size: 15px; color: #050505;
+}
+.nav-search .sb-row:hover { background: #f2f2f2; }
+.nav-search .sb-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.nav-search .sb-tx { min-width: 0; display: flex; flex-direction: column; overflow: hidden; text-overflow: ellipsis; }
+.nav-search .sb-tx small { color: #65676b; font-size: 12.5px; }
+.nav-search .sb-ico { width: 36px; height: 36px; border-radius: 50%; background: #e7f3ff; color: #0866ff; display: grid; place-items: center; flex-shrink: 0; }
+/* the navbar rule that absolutely-positions every svg inside .nav-search must not hit the dropdown */
+.home-page .nav-search .sb-pop svg { position: static; transform: none; left: auto; top: auto; width: 18px; height: 18px; color: inherit; }
+.nav-search .sb-empty { padding: 14px 8px; color: #65676b; font-size: 14.5px; text-align: center; }
+mark { background: #fff3b0; color: inherit; padding: 0; border-radius: 2px; }
+
+/* ---- /search page (Facebook-style layout) ---- */
+.sr-page { min-height: 100vh; background: #f0f2f5; }
+.sr-side {
+  position: fixed; top: 56px; bottom: 0; left: 0; width: 360px; z-index: 20; box-sizing: border-box;
+  background: #fff; box-shadow: 2px 0 4px rgba(0,0,0,.1); padding: 16px 8px; overflow-y: auto;
+}
+.sr-side h2 { margin: 0 8px; font-size: 24px; font-weight: 800; color: #050505; }
+.sr-side hr { border: 0; border-top: 1px solid #ced0d4; margin: 14px 8px 12px; }
+.sr-side h5 { margin: 0 8px 8px; font-size: 17px; font-weight: 700; color: #050505; }
+.sr-f {
+  width: 100%; border: 0; background: none; text-align: left; padding: 8px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; font: inherit; font-size: 15px; font-weight: 600; color: #050505;
+}
+.sr-f:hover { background: #f2f2f2; }
+.sr-f.on { background: #ebf5ff; }
+.sr-fi { width: 36px; height: 36px; border-radius: 50%; background: #e4e6eb; color: #050505; display: grid; place-items: center; flex-shrink: 0; }
+.sr-f.on .sr-fi { background: #0866ff; color: #fff; }
+.sr-sub { padding: 6px 8px 6px 56px; display: flex; flex-direction: column; gap: 2px; }
+.sr-trow { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 15px; color: #050505; }
+.sr-switch { width: 44px; height: 24px; border-radius: 12px; border: 0; background: #8d949e; position: relative; cursor: pointer; transition: background .15s; flex-shrink: 0; }
+.sr-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.sr-switch.on { background: #0866ff; }
+.sr-switch.on::after { transform: translateX(20px); }
+.sr-drop-h {
+  width: 100%; border: 0; background: none; padding: 10px 0; display: flex; align-items: center; justify-content: space-between;
+  font: inherit; font-size: 15px; color: #050505; cursor: pointer;
+}
+.sr-drop-h em { font-style: normal; color: #0866ff; margin-left: 8px; font-size: 13.5px; }
+.sr-opt { width: 100%; border: 0; background: none; text-align: left; padding: 8px 4px; display: flex; align-items: center; gap: 10px; font: inherit; font-size: 14.5px; color: #050505; cursor: pointer; border-radius: 6px; }
+.sr-opt:hover { background: #f2f2f2; }
+.sr-radio { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #8d949e; box-sizing: border-box; flex-shrink: 0; }
+.sr-opt.on .sr-radio { border-color: #0866ff; background: radial-gradient(#0866ff 45%, #fff 50%); }
+
+.sr-main { margin-left: 360px; padding: 24px 16px 48px; display: flex; flex-direction: column; gap: 16px; align-items: center; box-sizing: border-box; }
+.sr-main > * { width: 100%; max-width: 680px; }
+.sr-card h3 { margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #050505; }
+.sr-pad { padding: 36px 16px; }
+.sr-person { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.sr-person img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; cursor: pointer; flex-shrink: 0; }
+.sr-person-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.sr-person-tx b { font-size: 16px; font-weight: 600; color: #050505; }
+.sr-person-tx small { color: #65676b; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-person .fb-btn { padding: 8px 14px; }
+.sr-person .fb-btn.primary { background: #e7f3ff; color: #0866ff; }
+.sr-person .fb-btn.primary:hover:not(:disabled) { background: #dbe7f2; }
+.sr-you { color: #65676b; font-size: 14px; font-weight: 600; padding: 0 8px; }
+.sr-seeall {
+  width: 100%; border: 0; border-radius: 6px; background: #e4e6eb; padding: 10px; margin-top: 8px; cursor: pointer;
+  font: inherit; font-size: 15px; font-weight: 600; color: #050505;
+}
+.sr-seeall:hover { background: #d8dadf; }
+.sr-main > .sr-seeall { margin-top: 0; }
+.sr-post { border-radius: 8px; }
+.sr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.sr-tile img, .sr-tile video { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; display: block; background: #000; }
+.sr-tile small { display: block; margin-top: 4px; color: #65676b; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .sr-side { position: static; width: auto; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .sr-main { margin-left: 0; }
+}

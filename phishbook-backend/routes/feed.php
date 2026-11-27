@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\StoryController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\SearchController;
 
 Route::get('/posts', [PostController::class, 'index']);
 Route::post('/posts', [PostController::class, 'store']);
@@ -45,3 +46,6 @@ Route::get('/users/{user}/profile', [ProfileController::class, 'show']);
 Route::post('/profile/avatar', [ProfileController::class, 'avatar']);
 Route::post('/profile/cover', [ProfileController::class, 'cover']);
 Route::patch('/profile', [ProfileController::class, 'update']);
+
+// Search
+Route::get('/search/people', [SearchController::class, 'people']);

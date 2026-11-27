@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
+use App\Models\Friendship;
 use App\Models\Like;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -59,11 +60,56 @@ class PostController extends Controller
 
     public function index(Request $r)
     {
-        $uid  = $r->user()->id;
-                $q = $this->query()->latest();
+        $uid = $r->user()->id;
+        $q   = $this->query()->latest();
+
         if ($r->filled('user_id')) {
             $q->where('user_id', (int) $r->query('user_id'));
         }
+
+        // ---- search: ?q=text  (post text, author name, or the text of a shared post)
+        if ($r->filled('q')) {
+            $like = '%' . addcslashes(trim((string) $r->query('q')), '\\%_') . '%';
+            $q->where(function ($w) use ($like) {
+                $w->where('body', 'like', $like)
+                  ->orWhereHas('user', function ($u) use ($like) {
+                      $u->where('first_name', 'like', $like)
+                        ->orWhere('last_name', 'like', $like)
+                        ->orWhereRaw("CONCAT(first_name, ' ', last_name) like ?", [$like]);
+                  })
+                  ->orWhereHas('sharedPost', fn ($s) => $s->where('body', 'like', $like));
+            });
+        }
+
+        // ---- ?media=image|video  (photos / videos tabs of the search page)
+        if (in_array($r->query('media'), ['image', 'video'], true)) {
+            $q->where('media_type', $r->query('media'));
+        }
+
+        // ---- ?since=today|week|month|year  (the "Date posted" filter)
+        $sinceMap = [
+            'today' => now()->startOfDay(),
+            'week'  => now()->subDays(7),
+            'month' => now()->subDays(30),
+            'year'  => now()->subDays(365),
+        ];
+        $sinceKey = $r->query('since');
+        $since = is_string($sinceKey) ? ($sinceMap[$sinceKey] ?? null) : null;
+        if ($since) {
+            $q->where('created_at', '>=', $since);
+        }
+
+        // ---- ?from=me|friends  (the "Posts from" filter)
+        if ($r->query('from') === 'me') {
+            $q->where('user_id', $uid);
+        } elseif ($r->query('from') === 'friends') {
+            $friendIds = Friendship::where('status', 'accepted')
+                ->where(fn ($w) => $w->where('sender_id', $uid)->orWhere('receiver_id', $uid))
+                ->get()
+                ->map(fn ($f) => (int) $f->sender_id === (int) $uid ? (int) $f->receiver_id : (int) $f->sender_id);
+            $q->whereIn('user_id', $friendIds);
+        }
+
         $page = $q->paginate(10);
         $page->getCollection()->transform(fn ($p) => $this->fmt($p, $uid));
         return $page;

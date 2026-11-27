@@ -3,7 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" id="favicon" type="image/png" href="%PUBLIC_URL%/logo.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo.png" />
     <title>PHISHBOOK</title>
+    <script>
+      (function () {
+        var img = new Image();
+        img.onload = function () {
+          var s = 64, c = document.createElement('canvas');
+          c.width = c.height = s;
+          var x = c.getContext('2d');
+          x.beginPath();
+          x.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2);
+          x.closePath();
+          x.clip();
+          var m = Math.min(img.width, img.height);
+          x.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s);
+          document.getElementById('favicon').href = c.toDataURL('image/png');
+        };
+        img.src = '%PUBLIC_URL%/logo.png';
+      })();
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run PHISHBOOK.</noscript>
