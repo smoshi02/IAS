@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { avatarOf } from '../utils/people';
 import { IconPlus, IconLogoMark } from './Icons';
 import ReactionIcon from './ReactionIcons';
+import '../styles/storyshare.css';
 
 function timeAgo(iso) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -44,6 +45,25 @@ const mediaStyle = (s) => ({
   filter: filterCss(s.filter),
   transform: `rotate(${s.rotation || 0}deg) scale(${s.zoom || 1})`,
 });
+
+// A post that was shared to a story: white post card on a blue backdrop
+function SharedCard({ shared }) {
+  const m = shared.media && shared.media[0];
+  return (
+    <div className="sv-shared">
+      <div className="sv-shared-card">
+        <div className="ssc-head">
+          <img src={avatarOf(shared.user)} alt="" />
+          <strong>{shared.user.name}</strong>
+        </div>
+        {shared.body && <p className="ssc-body">{shared.body}</p>}
+        {m && (m.type === 'video'
+          ? <video className="ssc-media" src={m.url} muted playsInline autoPlay loop />
+          : <img className="ssc-media" src={m.url} alt="" />)}
+      </div>
+    </div>
+  );
+}
 
 function StoryText({ text, color, pos }) {
   if (!text) return null;
@@ -427,7 +447,9 @@ function Viewer({ groups, start, meId, seen, onSeen, onClose, onDelete, onReact,
               ))}
             </div>
 
-            {isVideo
+            {story.shared
+              ? <SharedCard key={story.id} shared={story.shared} />
+              : isVideo
               ? (
                 <video
                   ref={videoRef}
@@ -585,7 +607,8 @@ export default function Stories() {
     load();
     const wake = () => { if (document.visibilityState === 'visible') load(); };
     const id = setInterval(wake, 5000);
-    return () => clearInterval(id);
+    window.addEventListener('stories:refresh', load);
+    return () => { clearInterval(id); window.removeEventListener('stories:refresh', load); };
   }, []);
 
   const pick = (e) => {
@@ -649,7 +672,24 @@ export default function Stories() {
           const first = g.stories[0];
           return (
             <button type="button" className="story-tile" key={g.user.id} onClick={() => setOpen(i)}>
-              {first.media_type === 'video'
+              {first.shared
+                ? (
+                  <span className="cover sv-tile-shared">
+                    <span className="stp-card">
+                      <span className="stp-head">
+                        <img src={avatarOf(first.shared.user)} alt="" />
+                        <b>{first.shared.user.name}</b>
+                      </span>
+                      {first.shared.body && <span className="stp-body">{first.shared.body}</span>}
+                      {first.shared.media && first.shared.media[0] && (
+                        first.shared.media[0].type === 'video'
+                          ? <video className="stp-media" src={first.shared.media[0].url} muted preload="metadata" />
+                          : <img className="stp-media" src={first.shared.media[0].url} alt="" />
+                      )}
+                    </span>
+                  </span>
+                )
+                : first.media_type === 'video'
                 ? <video className="cover" src={first.media_url} muted preload="metadata" style={{ filter: filterCss(first.filter) }} />
                 : <img className="cover" src={first.media_url} alt="" style={{ filter: filterCss(first.filter) }} />}
               <img className="ring" src={avatarOf(g.user)} alt="" />

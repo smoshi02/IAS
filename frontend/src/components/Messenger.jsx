@@ -4,6 +4,8 @@ import emojiData from 'emoji-picker-react/data/emojis-en';
 import api from '../api/axios';
 import { IconSearch } from './Icons';
 import { avatarOf, timeAgo } from '../utils/people';
+import PostModal from './PostModal';
+import '../styles/msgshare.css';
 
 /* ------------------------------------------------------------------ */
 /* small helpers                                                       */
@@ -64,6 +66,28 @@ function sentText(iso) {
   return t === 'Just now' ? 'Sent' : `Sent ${t} ago`;
 }
 
+// a shared post inside a chat: photo on top, text + author underneath
+function PostCard({ shared, onLoad }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="mm-post" role="button" tabIndex={0} onClick={() => setOpen(true)} onKeyDown={(e) => { if (e.key === 'Enter') setOpen(true); }}>
+        {shared.media_url && (shared.media_type === 'video'
+          ? <video src={shared.media_url} preload="metadata" muted onLoadedMetadata={onLoad} />
+          : <img src={shared.media_url} alt="" onLoad={onLoad} />)}
+        <div className="mm-post-body">
+          {shared.body && <div className="mm-post-title"><FbText text={shared.body} size={16} /></div>}
+          <div className="mm-post-src">
+            <img src={avatarOf(shared.user, 32)} alt="" />
+            <span>{shared.user.name}</span>
+          </div>
+        </div>
+      </div>
+      {open && <PostModal postId={shared.id} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
 function previewOf(c) {
   const l = c.last;
   if (!l) return 'Say hi 👋';
@@ -71,6 +95,7 @@ function previewOf(c) {
   if (l.unsent) return l.mine ? 'You unsent a message' : `${who} unsent a message`;
   if (l.audio) return `${who} sent a voice message`;
   if (l.sticker) return `${who} sent a sticker`;
+  if (l.shared && !l.body) return `${who} sent a post`;
   if (l.media_type && !l.body) return `${who} sent a ${l.media_type === 'video' ? 'video' : 'photo'}`;
   return `${l.mine ? 'You: ' : ''}${l.body}`;
 }
@@ -451,6 +476,7 @@ function ForwardModal({ m, friends, onClose, onSend }) {
         <div className="mm-modal-body">
           <div className="mm-fwd-preview">
             {m.audio_url && '🎤 Voice message'}
+            {m.shared && !m.media_url && !m.body && '📰 Post'}
             {m.media_url && (m.media_type === 'video' ? '🎬 Video' : '🖼️ Photo')}
             {(m.media_url || m.audio_url) && m.body ? ' · ' : ''}<FbText text={m.body} size={16} />
           </div>
@@ -625,6 +651,7 @@ function MessageRow({
             {!m.unsent && !m.sticker && m.body && (bigEmoji
               ? <div className="mm-big"><FbText text={m.body} size={emojiN === 1 ? 44 : 32} /></div>
               : <div className="mm-bubble"><FbText text={m.body} /></div>)}
+            {!m.unsent && m.shared && <PostCard shared={m.shared} onLoad={onMediaLoad} />}
           </div>
 
           {!m.mine && tools}

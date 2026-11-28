@@ -10,7 +10,7 @@ class Message extends Model
         'sender_id', 'receiver_id', 'body', 'read_at',
         'media_path', 'media_type', 'reply_to_id', 'forwarded',
         'deleted_by_sender', 'deleted_by_receiver', 'unsent_at',
-        'audio_path', 'audio_seconds', 'sticker',
+        'audio_path', 'audio_seconds', 'sticker', 'shared_post_id',
     ];
 
     protected $casts = [
@@ -24,5 +24,6 @@ class Message extends Model
 
     public function sender()    { return $this->belongsTo(User::class, 'sender_id'); }
     public function replyTo()   { return $this->belongsTo(self::class, 'reply_to_id'); }
+    public function sharedPost() { return $this->belongsTo(Post::class, 'shared_post_id'); }
     public function reactions() { return $this->hasMany(MessageReaction::class); }
 }

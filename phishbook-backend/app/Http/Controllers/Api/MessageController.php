@@ -58,7 +58,22 @@ class MessageController extends Controller
         return Message::with([
             'replyTo.sender:id,first_name,last_name',
             'reactions.user:id,first_name,last_name',
+            'sharedPost.user:id,first_name,last_name,avatar_path',
         ]);
+    }
+
+    /** The post shown as a preview card inside a chat message. */
+    private function fmtShared($p): ?array
+    {
+        if (!$p) return null;
+        $media = app(PostController::class)->mediaList($p)[0] ?? null;
+        return [
+            'id'         => (int) $p->id,
+            'body'       => $p->body,
+            'media_url'  => $media['url'] ?? null,
+            'media_type' => $media['type'] ?? null,
+            'user'       => ['id' => (int) $p->user->id, 'name' => $this->fullName($p->user), 'avatar' => $p->user->avatar_url],
+        ];
     }
 
     private function copyFile(?string $from): ?string
@@ -100,6 +115,7 @@ class MessageController extends Controller
             'audio_seconds' => $unsent ? null : $m->audio_seconds,
             'sticker'       => !$unsent && (bool) $m->sticker,
             'forwarded'     => (bool) $m->forwarded,
+            'shared'        => $unsent ? null : $this->fmtShared($m->sharedPost),
             'created_at'    => $m->created_at->toIso8601String(),
             'read'          => $m->read_at !== null,
             'reply'         => $reply,
@@ -170,6 +186,7 @@ class MessageController extends Controller
                     'media_type' => $m->unsent_at ? null : $m->media_type,
                     'audio'      => !$m->unsent_at && (bool) $m->audio_path,
                     'sticker'    => !$m->unsent_at && (bool) $m->sticker,
+                    'shared'     => !$m->unsent_at && $m->shared_post_id !== null,
                     'mine'       => (int) $m->sender_id === $me,
                     'created_at' => $m->created_at->toIso8601String(),
                 ] : null,
@@ -233,9 +250,10 @@ class MessageController extends Controller
             'duration'    => 'nullable|integer|min:0|max:900',
             'sticker'     => 'nullable|boolean',
             'reply_to_id' => 'nullable|integer',
+            'shared_post_id' => 'nullable|integer|exists:posts,id',
         ]);
         abort_if(
-            !$r->filled('body') && !$r->hasFile('media') && !$r->hasFile('audio'),
+            !$r->filled('body') && !$r->hasFile('media') && !$r->hasFile('audio') && !$r->filled('shared_post_id'),
             422,
             'Write a message or attach a photo, video or voice message.'
         );
@@ -260,9 +278,17 @@ class MessageController extends Controller
             }
         }
 
+        // a shared post: always point at the original, not at a re-share of it
+        $sharedId = null;
+        if ($r->filled('shared_post_id')) {
+            $sp = \App\Models\Post::find((int) $r->input('shared_post_id'));
+            if ($sp) $sharedId = $sp->shared_post_id ?: $sp->id;
+        }
+
         $m = Message::create([
             'sender_id'     => $me,
             'receiver_id'   => $user->id,
+            'shared_post_id' => $sharedId,
             'body'          => trim((string) $r->input('body')),
             'media_path'    => $path,
             'media_type'    => $type,
@@ -362,6 +388,7 @@ class MessageController extends Controller
             'audio_path'    => $audio,
             'audio_seconds' => $audio ? $message->audio_seconds : null,
             'sticker'       => (bool) $message->sticker,
+            'shared_post_id' => $message->shared_post_id,
             'forwarded'     => true,
         ]);
 

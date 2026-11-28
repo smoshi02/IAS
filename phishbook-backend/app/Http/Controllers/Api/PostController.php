@@ -30,7 +30,7 @@ class PostController extends Controller
     }
 
     /** Every photo/video on a post as [{url, type}], oldest posts (single media_path) included. */
-    private function mediaList(Post $p): array
+    public function mediaList(Post $p): array
     {
         $items = is_array($p->media_paths) ? $p->media_paths : [];
 
@@ -175,6 +175,12 @@ class PostController extends Controller
         return response()->json($this->fmt($this->query()->findOrFail($post->id), $r->user()->id), 201);
     }
 
+    /** One post, for the "X's Post" pop-up (opened from a chat card). */
+    public function show(Request $r, Post $post)
+    {
+        return response()->json($this->fmt($this->query()->findOrFail($post->id), $r->user()->id));
+    }
+
     public function destroy(Request $r, Post $post)
     {
         abort_if($post->user_id !== $r->user()->id, 403);
@@ -242,5 +248,22 @@ class PostController extends Controller
             'shared_post_id' => $orig->id,
         ]);
         return response()->json($this->fmt($this->query()->findOrFail($new->id), $r->user()->id), 201);
+    }
+
+    /** "Your story" in the share dialog: puts the post into the user's story for 24h. */
+    public function shareToStory(Request $r, Post $post)
+    {
+        $orig = $post->shared_post_id ? $post->sharedPost : $post;
+        abort_if(!$orig, 404);
+
+        $story = \App\Models\Story::create([
+            'user_id'        => $r->user()->id,
+            'shared_post_id' => $orig->id,
+            'media_path'     => null,
+            'media_type'     => null,
+            'expires_at'     => now()->addHours(24),
+        ]);
+
+        return response()->json(['id' => $story->id], 201);
     }
 }

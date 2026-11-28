@@ -9,6 +9,7 @@ import ReactionIcon from '../components/ReactionIcons';
 import PostMenu from '../components/PostMenu';
 import PostMedia, { makeItems, revokeItems, MAX_FILES } from '../components/PostMedia';
 import CreatePostModal from '../components/CreatePostModal';
+import ShareModal from '../components/ShareModal';
 import OtherPostMenu, { HiddenPost } from '../components/OtherPostMenu';
 import TopNav from '../components/TopNav';
 import * as Art from '../components/SideIcons';
@@ -294,19 +295,34 @@ export default function Home() {
     setShareText('');
   };
 
-  const confirmShare = async () => {
+  const confirmShare = async (text = '') => {
     if (!shareTarget) return;
     const post = shareTarget;
     setSharing(true);
     holdSync();
     try {
-      const body = shareText.trim();
+      const body = String(text || '').trim();
       const { data } = await api.post(`/posts/${post.id}/share`, body ? { body } : {});
       setPosts((prev) => [data, ...prev.map((p) => (p.id === post.id ? { ...p, shares_count: p.shares_count + 1 } : p))]);
       setShareTarget(null);
       setShareText('');
     } catch (e) { /* ignore */ } finally {
       setSharing(false);
+    }
+  };
+
+  // "Your story" in the share dialog
+  const shareToStory = async () => {
+    if (!shareTarget) return false;
+    holdSync();
+    try {
+      await api.post(`/posts/${shareTarget.id}/story`);
+      window.dispatchEvent(new Event('stories:refresh'));
+      setShareTarget(null);
+      setShareText('');
+      return true;
+    } catch (e) {
+      return false;
     }
   };
 
@@ -641,30 +657,16 @@ export default function Home() {
       )}
 
       {shareTarget && (
-        <div className="confirm-overlay" onClick={closeShare}>
-          <div className="confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Share this post?</h3>
-            <div className="share-preview">
-              <strong>{shareTarget.user.name}</strong>
-              <p>
-                {(shareTarget.body || (shareTarget.media_url ? 'Shared a photo or video' : '')).slice(0, 140)}
-              </p>
-            </div>
-            <textarea
-              className="share-input"
-              maxLength={2000}
-              placeholder="Say something about this… (optional)"
-              value={shareText}
-              onChange={(e) => setShareText(e.target.value)}
-            />
-            <div className="confirm-actions">
-              <button type="button" className="ghost" disabled={sharing} onClick={closeShare}>Cancel</button>
-              <button type="button" className="primary" disabled={sharing} onClick={confirmShare}>
-                {sharing ? 'Sharing…' : 'Share'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ShareModal
+          post={shareTarget}
+          user={user}
+          conversations={chats.conversations}
+          sharing={sharing}
+          onShare={confirmShare}
+          onShareStory={shareToStory}
+          onSent={chats.refresh}
+          onClose={closeShare}
+        />
       )}
 
       <AdToast onOpen={() => window.open('/sim/ad-landing', '_blank', 'noopener,noreferrer')} />

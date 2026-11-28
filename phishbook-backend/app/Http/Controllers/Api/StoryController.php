@@ -16,12 +16,24 @@ class StoryController extends Controller
         return $n !== '' ? $n : ($u->name ?? 'User');
     }
 
+    /** The post shown inside a "shared to story" card. */
+    private function fmtShared($p): array
+    {
+        $media = app(PostController::class)->mediaList($p);
+        return [
+            'id'    => $p->id,
+            'body'  => $p->body,
+            'media' => $media,
+            'user'  => ['id' => $p->user->id, 'name' => $this->fullName($p->user), 'avatar' => $p->user->avatar_url],
+        ];
+    }
+
     public function index(Request $r)
     {
         $uid = $r->user()->id;
 
         return Story::where('expires_at', '>', now())
-            ->with(['user:id,first_name,last_name,avatar_path', 'reactions:id,story_id,user_id,type'])
+            ->with(['user:id,first_name,last_name,avatar_path', 'reactions:id,story_id,user_id,type', 'sharedPost.user:id,first_name,last_name,avatar_path'])
             ->oldest()
             ->get()
             ->groupBy('user_id')
@@ -31,7 +43,8 @@ class StoryController extends Controller
                     'user'    => ['id' => $u->id, 'name' => $this->fullName($u), 'avatar' => $u->avatar_url],
                     'stories' => $items->map(fn ($s) => [
                         'id'              => $s->id,
-                        'media_url'       => asset('storage/' . $s->media_path),
+                        'media_url'       => $s->media_path ? asset('storage/' . $s->media_path) : null,
+                        'shared'          => $s->sharedPost ? $this->fmtShared($s->sharedPost) : null,
                         'media_type'      => $s->media_type,
                         'caption'         => $s->caption,
                         'filter'          => $s->filter,
@@ -117,7 +130,9 @@ class StoryController extends Controller
     public function destroy(Request $r, Story $story)
     {
         abort_if($story->user_id !== $r->user()->id, 403);
-        Storage::disk('public')->delete($story->media_path);
+        if ($story->media_path) {
+            Storage::disk('public')->delete($story->media_path);
+        }
         $story->delete();
         return response()->noContent();
     }

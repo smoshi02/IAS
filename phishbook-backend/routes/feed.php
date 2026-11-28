@@ -11,11 +11,13 @@ use App\Http\Controllers\Api\SearchController;
 
 Route::get('/posts', [PostController::class, 'index']);
 Route::post('/posts', [PostController::class, 'store']);
+Route::get('/posts/{post}', [PostController::class, 'show']);
 Route::delete('/posts/{post}', [PostController::class, 'destroy']);
 Route::post('/posts/{post}/like', [PostController::class, 'like']);
 Route::get('/posts/{post}/comments', [PostController::class, 'comments']);
 Route::post('/posts/{post}/comments', [PostController::class, 'comment']);
 Route::post('/posts/{post}/share', [PostController::class, 'share']);
+Route::post('/posts/{post}/story', [PostController::class, 'shareToStory']);
 
 Route::get('/stories', [StoryController::class, 'index']);
 Route::post('/stories', [StoryController::class, 'store']);
