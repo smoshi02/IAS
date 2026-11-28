@@ -661,7 +661,7 @@ export default function Home() {
         </div>
       )}
 
-      <AdToast onOpen={() => navigate('/sim/ad-landing')} />
+      <AdToast onOpen={() => window.open('/sim/ad-landing', '_blank', 'noopener,noreferrer')} />
 
       <NotificationToast
         toast={notifs.toast}

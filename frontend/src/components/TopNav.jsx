@@ -113,14 +113,9 @@ const NAV_TABS = [
 ];
 
 
-/* bold the part of `text` that matches `q` */
-export function Hl({ text, q }) {
-  const t = String(text || '');
-  const needle = (q || '').trim();
-  if (!needle) return t;
-  const i = t.toLowerCase().indexOf(needle.toLowerCase());
-  if (i < 0) return t;
-  return (<>{t.slice(0, i)}<mark>{t.slice(i, i + needle.length)}</mark>{t.slice(i + needle.length)}</>);
+/* Plain text — no highlighting of the matched part of `text` against `q`. */
+export function Hl({ text }) {
+  return String(text || '');
 }
 
 /* the search input + live "as you type" suggestions (people and posts) */

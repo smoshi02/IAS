@@ -17,7 +17,6 @@
 /* the navbar rule that absolutely-positions every svg inside .nav-search must not hit the dropdown */
 .home-page .nav-search .sb-pop svg { position: static; transform: none; left: auto; top: auto; width: 18px; height: 18px; color: inherit; }
 .nav-search .sb-empty { padding: 14px 8px; color: #65676b; font-size: 14.5px; text-align: center; }
-mark { background: #fff3b0; color: inherit; padding: 0; border-radius: 2px; }
 
 /* ---- /search page (Facebook-style layout) ---- */
 .sr-page { min-height: 100vh; background: #f0f2f5; }

@@ -121,6 +121,16 @@
   font-size: 28px;
   font-weight: 800;
 }
+.shop-logo-img {
+  height: 44px;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  flex: none;
+}
+.shop-logo-text {
+  font-weight: 400;
+}
 
 .shop-search-wrap { flex: 1; }
 .shop-search {

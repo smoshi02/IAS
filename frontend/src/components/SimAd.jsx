@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import '../styles/simad.css';
 
 /*
@@ -53,7 +52,6 @@ function ArrowIcon() {
 const pad = (n) => String(n).padStart(2, '0');
 
 export default function SimAd({ variant = 'default' }) {
-  const navigate = useNavigate();
   const [left, setLeft] = useState(START_SECONDS);
 
   // Purely cosmetic countdown — nothing is tied to it.
@@ -69,7 +67,7 @@ export default function SimAd({ variant = 'default' }) {
     <button
       type="button"
       className={`sim-ad sim-ad-${variant}`}
-      onClick={() => navigate('/sim/ad-landing')}
+      onClick={() => window.open('/sim/ad-landing', '_blank', 'noopener,noreferrer')}
       aria-label="Sponsored: claim your 1,000 peso Shoppa voucher"
     >
       <span className="sim-ad-spark sim-ad-spark-1" aria-hidden="true" />

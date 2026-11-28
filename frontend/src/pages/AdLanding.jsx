@@ -31,15 +31,11 @@ const CheckIcon = (p) => (<svg {...base} strokeWidth={3} {...p}><path d="M20 6 9
 const ShareDotIcon = (p) => (<svg {...base} {...p}><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></svg>);
 const CameraIcon = (p) => (<svg {...base} {...p}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></svg>);
 
-/* Fictional "Shoppa" mark — a shopping bag with an S. Invented, not a real brand asset. */
-const ShoppaLogo = ({ size = 48 }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
-    <path d="M14 14a10 10 0 0 1 20 0" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
-    <rect x="5" y="14" width="38" height="29" rx="5" fill="#fff" />
-    <path d="M29 24.5c-1-2-3.2-2.8-5.2-2.6-2.6.3-3.9 2.2-3.2 3.8.8 1.8 3.3 2.2 5 2.7 2.4.7 3.2 2.1 2.6 3.8-.7 1.7-2.8 2.4-4.8 2.1-2-.3-3.5-1.4-4.1-3"
-      fill="none" stroke="#ee4d2d" strokeWidth="3" strokeLinecap="round" />
-  </svg>
-);
+/* Browser-tab favicon for the "Shoppa" storefront stage.
+   Drop the image at frontend/public/shoplogo.png. */
+const SHOPPA_FAVICON_URL = '/shoplogo.png';
+/* Header logo shown on the storefront itself — separate image from the favicon. */
+const SHOPPA_LOGO_URL = '/shoplogo2.png';
 
 const RED_FLAGS = [
   'Urgency bait in the ad itself — "claim before it expires" — designed to get you clicking fast.',
@@ -197,6 +193,28 @@ export default function AdLanding() {
   const nextIdx = useRef(0);
   const timer = useRef(null);
 
+  // Swap the browser tab title AND favicon to "Shoppa" while on this
+  // page, and restore the real app's title/icon on the way out.
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = 'Shopee';
+
+    const favicon = document.getElementById('favicon');
+    const previousFaviconHref = favicon ? favicon.getAttribute('href') : null;
+    if (favicon) {
+      favicon.setAttribute('type', 'image/png');
+      favicon.setAttribute('href', SHOPPA_FAVICON_URL);
+    }
+
+    return () => {
+      document.title = previousTitle;
+      if (favicon) {
+        favicon.setAttribute('type', 'image/png');
+        if (previousFaviconHref !== null) favicon.setAttribute('href', previousFaviconHref);
+      }
+    };
+  }, []);
+
   // Schedule pop-ups while the storefront is showing.
   useEffect(() => {
     if (stage !== 'grid') return undefined;
@@ -293,8 +311,8 @@ export default function AdLanding() {
 
         <div className="shop-header-main">
           <div className="shop-logo">
-            <ShoppaLogo size={50} />
-            Shoppa
+            <img src={SHOPPA_LOGO_URL} alt="" className="shop-logo-img" />
+            <span className="shop-logo-text">Shopee</span>
           </div>
           <div className="shop-search-wrap">
             <div className="shop-search">
