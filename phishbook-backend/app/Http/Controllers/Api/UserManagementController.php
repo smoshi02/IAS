@@ -5,11 +5,72 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AdminActivityLog;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class UserManagementController extends Controller
 {
     public function index(Request $request)
+    {
+        $users = $this->filtered($request)->orderByDesc('created_at')->paginate(15);
+
+        // The password column holds whatever was captured at registration -
+        // surfacing it here is intentional for this exercise's admin
+        // monitoring. Not exposed on /login, /me, or /register.
+        $users->getCollection()->each->makeVisible('password');
+
+        return response()->json($users);
+    }
+
+    /**
+     * Downloadable Excel list of participants for the admin to hand off.
+     * Only the profile fields a participant may have filled in themselves
+     * are included - a blank cell just means that participant never filled
+     * that field in on Phishbook. Same search/status/account_type filters
+     * as the on-screen table, but unpaginated (every matching row).
+     */
+    public function exportExcel(Request $request)
+    {
+        $users = $this->filtered($request)->orderByDesc('created_at')->get();
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Users');
+
+        $headers = ['Full Name', 'Contact Number', 'Email', 'Address', 'Gender', 'Job Title'];
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+
+        $row = 2;
+        foreach ($users as $user) {
+            $sheet->fromArray([
+                trim("{$user->first_name} {$user->last_name}"),
+                $user->mobile_number,
+                $user->email,
+                $user->address,
+                $user->gender,
+                $user->job_title,
+            ], null, "A{$row}");
+            $row++;
+        }
+
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'phishbook_users_' . now()->format('Ymd_His') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    private function filtered(Request $request): Builder
     {
         $query = User::where('role', 'USER');
 
@@ -31,15 +92,7 @@ class UserManagementController extends Controller
             $query->where('account_type', $accountType);
         }
 
-        $users = $query->orderByDesc('created_at')->paginate(15);
-
-        // The password column holds a one-way bcrypt hash, never the
-        // original value, so surfacing it here only lets admins see that a
-        // password is hashed - it cannot be used to recover anyone's
-        // password. Not exposed on /login, /me, or /register.
-        $users->getCollection()->each->makeVisible('password');
-
-        return response()->json($users);
+        return $query;
     }
 
     public function updateStatus(Request $request, User $user)

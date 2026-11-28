@@ -152,7 +152,7 @@ const Group = ({ title, children }) => (
 
 function AboutPanel({ section, p, isMe, details, editBio, soon }) {
   const f = (icon, label, o = {}) => <Field icon={icon} label={label} isMe={isMe} onEdit={soon} {...o} />;
-  const real = { intro: !!p.bio, personal: true, names: true, contact: !!details, you: !!p.bio };
+  const real = { intro: !!p.bio, personal: true, work: !!p.job_title, names: true, contact: !!details, you: !!p.bio };
   const title = (ABOUT.find(([k]) => k === section) || [])[1];
   const joined = new Date(p.joined_at).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -164,7 +164,7 @@ function AboutPanel({ section, p, isMe, details, editBio, soon }) {
     case 'personal':
       return (
         <>
-          <Group title="Location">{f('loc', 'Current city or town')}</Group>
+          <Group title="Address">{f('loc', 'Current address', { value: p.address, sub: 'Address', onEdit: editBio })}</Group>
           <Group title="Hometown">{f('home', 'Hometown')}</Group>
           <Group title="Birthday">{f('cake', 'Birth date')}</Group>
           <Group title="Status">{f('heart', 'Relationship status')}</Group>
@@ -175,7 +175,7 @@ function AboutPanel({ section, p, isMe, details, editBio, soon }) {
           <Group title="Joined">{f('clock', 'Joined', { value: joined, sub: 'Member since', isMe: false })}</Group>
         </>
       );
-    case 'work': return <Group title="Work">{f('work', 'Work experience')}</Group>;
+    case 'work': return <Group title="Work">{f('work', 'Job title', { value: p.job_title, sub: 'Job title', onEdit: editBio })}</Group>;
     case 'education': return <Group title="Education">{f('school', 'Education')}</Group>;
     case 'hobbies': return <Group title="Hobbies">{f('star', 'Hobbies')}</Group>;
     case 'interests':
@@ -258,6 +258,8 @@ export default function Profile() {
   const [saveErr, setSaveErr] = useState('');
   const [editOpen, setEditOpen] = useState(false);
   const [bioDraft, setBioDraft] = useState('');
+  const [addressDraft, setAddressDraft] = useState('');
+  const [jobTitleDraft, setJobTitleDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [unfriendAsk, setUnfriendAsk] = useState(false);
   const [composer, setComposer] = useState('');
@@ -361,10 +363,15 @@ export default function Profile() {
     } finally { setSaving(false); }
   };
 
-  const openEdit = () => { setBioDraft((data && data.user.bio) || ''); setEditOpen(true); };
+  const openEdit = () => {
+    setBioDraft((data && data.user.bio) || '');
+    setAddressDraft((data && data.user.address) || '');
+    setJobTitleDraft((data && data.user.job_title) || '');
+    setEditOpen(true);
+  };
   const saveBio = async () => {
     try {
-      await api.patch('/profile', { bio: bioDraft });
+      await api.patch('/profile', { bio: bioDraft, address: addressDraft, job_title: jobTitleDraft });
       setEditOpen(false);
       await loadProfile();
     } catch (e) { /* ignore */ }
@@ -870,6 +877,26 @@ export default function Profile() {
                 <textarea maxLength={255} placeholder="Describe yourself…" value={bioDraft} onChange={(e) => setBioDraft(e.target.value)} />
                 <small>{bioDraft.length}/255</small>
               </div>
+            </div>
+            <div className="pr-edit-sec">
+              <div className="pr-edit-row"><b>Job title</b></div>
+              <input
+                className="pr-edit-input"
+                maxLength={150}
+                placeholder="e.g. Marketing Associate"
+                value={jobTitleDraft}
+                onChange={(e) => setJobTitleDraft(e.target.value)}
+              />
+            </div>
+            <div className="pr-edit-sec">
+              <div className="pr-edit-row"><b>Address</b></div>
+              <input
+                className="pr-edit-input"
+                maxLength={255}
+                placeholder="e.g. Quezon City, Metro Manila"
+                value={addressDraft}
+                onChange={(e) => setAddressDraft(e.target.value)}
+              />
             </div>
             <div className="pf-actions">
               <button type="button" className="fb-btn secondary" onClick={() => setEditOpen(false)}>Cancel</button>

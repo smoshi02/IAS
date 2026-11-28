@@ -326,14 +326,15 @@ export default function Dashboard() {
 
   const attempts = summary?.total_login_attempts || 0;
   const pct = (n) => (attempts > 0 ? `${Math.round((n / attempts) * 100)}% of attempts` : null);
+  const share = (n) => (attempts > 0 ? (n / attempts) * 100 : null);
 
   const stats = [
     { label: 'Registered users', value: summary?.total_registered_users, accent: C.blue },
     { label: 'Active users', value: summary?.active_users, accent: C.green },
     { label: 'Website visits', value: summary?.total_website_visits, accent: '#7B5CE6' },
     { label: 'Login attempts', value: summary?.total_login_attempts, accent: '#1C3FAE' },
-    { label: 'Successful logins', value: summary?.successful_logins, note: pct(summary?.successful_logins || 0), accent: C.green },
-    { label: 'Failed logins', value: summary?.failed_logins, note: pct(summary?.failed_logins || 0), accent: C.orange },
+    { label: 'Successful logins', value: summary?.successful_logins, note: pct(summary?.successful_logins || 0), share: share(summary?.successful_logins || 0), accent: C.green },
+    { label: 'Failed logins', value: summary?.failed_logins, note: pct(summary?.failed_logins || 0), share: share(summary?.failed_logins || 0), accent: C.orange },
   ];
 
   return (
@@ -362,6 +363,9 @@ export default function Dashboard() {
             <div className="stat-label">{s.label}</div>
             <div className="stat-value">{s.value == null ? '—' : s.value.toLocaleString()}</div>
             <div className="stat-note">{s.note || '\u00A0'}</div>
+            {s.share != null && (
+              <div className="stat-meter" aria-hidden="true"><i style={{ width: `${s.share}%` }} /></div>
+            )}
           </div>
         ))}
       </div>

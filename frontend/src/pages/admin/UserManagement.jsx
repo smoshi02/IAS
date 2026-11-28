@@ -93,6 +93,31 @@ export default function UserManagement() {
   const hasFilters = Boolean(search || status || accountType);
   const clearFilters = () => { setSearch(''); setStatus(''); setAccountType(''); };
 
+  const exportExcel = () => {
+    const params = new URLSearchParams();
+    if (debounced) params.set('search', debounced);
+    if (status) params.set('status', status);
+    if (accountType) params.set('account_type', accountType);
+    const token = localStorage.getItem('phishbook_token');
+    const base = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+    fetch(`${base}/admin/users/export-excel?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Export failed (${res.status})`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'phishbook_users.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(() => setError('Could not export the Excel file. Check that the API is running.'));
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -125,6 +150,7 @@ export default function UserManagement() {
           <option value="DUMMY">Dummy</option>
         </select>
         {hasFilters && <button type="button" className="btn-ghost" onClick={clearFilters}>Clear filters</button>}
+        <button type="button" onClick={exportExcel}>Export Excel</button>
       </div>
 
       {error && <div className="auth-error" style={{ marginTop: 16 }}>{error}</div>}

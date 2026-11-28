@@ -38,6 +38,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::get('/analytics/daily-activity', [AnalyticsController::class, 'dailyActivity']);
 
     Route::get('/users', [UserManagementController::class, 'index']);
+    Route::get('/users/export-excel', [UserManagementController::class, 'exportExcel']);
     Route::patch('/users/{user}/status', [UserManagementController::class, 'updateStatus']);
     Route::delete('/users/{user}', [UserManagementController::class, 'destroy']);
 

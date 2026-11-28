@@ -24,7 +24,13 @@ class ProfileController extends Controller
 
     private function mine(User $u): array
     {
-        return ['avatar' => $u->avatar_url, 'cover' => $u->cover_url, 'bio' => $u->bio];
+        return [
+            'avatar' => $u->avatar_url,
+            'cover' => $u->cover_url,
+            'bio' => $u->bio,
+            'address' => $u->address,
+            'job_title' => $u->job_title,
+        ];
     }
 
     /** Everything the profile page needs (polled every few seconds). */
@@ -79,6 +85,8 @@ class ProfileController extends Controller
                 'id'        => $uid,
                 'name'      => $this->fullName($user),
                 'bio'       => $user->bio,
+                'address'   => $user->address,
+                'job_title' => $user->job_title,
                 'avatar'    => $user->avatar_url,
                 'cover'     => $user->cover_url,
                 'joined_at' => optional($user->created_at)->toIso8601String() ?? now()->toIso8601String(),
@@ -112,10 +120,16 @@ class ProfileController extends Controller
 
     public function update(Request $r)
     {
-        $r->validate(['bio' => 'nullable|string|max:255']);
+        $r->validate([
+            'bio' => 'nullable|string|max:255',
+            'address' => 'nullable|string|max:255',
+            'job_title' => 'nullable|string|max:150',
+        ]);
         $u = $r->user();
-        $bio = trim((string) $r->input('bio'));
-        $u->bio = $bio !== '' ? $bio : null;
+        $clean = fn ($key) => ($v = trim((string) $r->input($key))) !== '' ? $v : null;
+        $u->bio = $clean('bio');
+        $u->address = $clean('address');
+        $u->job_title = $clean('job_title');
         $u->save();
         return $this->mine($u);
     }
