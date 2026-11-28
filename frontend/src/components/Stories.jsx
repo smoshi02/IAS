@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Emoji, EmojiStyle } from 'emoji-picker-react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { avatarOf } from '../utils/people';
 import { IconPlus, IconLogoMark } from './Icons';
+import ReactionIcon from './ReactionIcons';
 
 function timeAgo(iso) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -29,29 +29,15 @@ const TEXT_COLORS = {
 const POSITIONS = ['top', 'center', 'bottom'];
 
 const REACTIONS = [
-  { key: 'like',  emoji: '👍', label: 'Like' },
-  { key: 'love',  emoji: '❤️', label: 'Love' },
-  { key: 'care',  emoji: '🥰', label: 'Care' },
-  { key: 'haha',  emoji: '😆', label: 'Haha' },
-  { key: 'wow',   emoji: '😮', label: 'Wow' },
-  { key: 'sad',   emoji: '😢', label: 'Sad' },
-  { key: 'angry', emoji: '😡', label: 'Angry' },
+  { key: 'like',  label: 'Like' },
+  { key: 'love',  label: 'Love' },
+  { key: 'care',  label: 'Care' },
+  { key: 'haha',  label: 'Haha' },
+  { key: 'wow',   label: 'Wow' },
+  { key: 'sad',   label: 'Sad' },
+  { key: 'angry', label: 'Angry' },
 ];
-const emojiOf = (k) => (REACTIONS.find((r) => r.key === k) || {}).emoji;
-
-// Facebook-style emoji image for a plain emoji character
-function FbEmoji({ char, size = 22 }) {
-  if (!char) return null;
-  return (
-    <span className="fbe">
-      <Emoji
-        unified={Array.from(char).map((c) => c.codePointAt(0).toString(16)).join('-')}
-        size={size}
-        emojiStyle={EmojiStyle.FACEBOOK}
-      />
-    </span>
-  );
-}
+const reactionOf = (k) => REACTIONS.find((r) => r.key === k);
 
 // zoom + rotation + filter chosen in the creator, applied the same way in the viewer
 const mediaStyle = (s) => ({
@@ -249,15 +235,7 @@ const SvIcon = {
   Left: () => <svg {...svStroke}><path d="M15 5l-7 7 7 7" /></svg>,
   Right: () => <svg {...svStroke}><path d="M9 5l7 7-7 7" /></svg>,
   Trash: () => <svg {...svStroke} width="18" height="18"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>,
-  Thumb: () => <svg {...sv}><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z" /></svg>,
-  Heart: () => <svg {...sv}><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>,
 };
-
-function ReactIcon({ k }) {
-  if (k === 'like') return <span className="sv-r-circle like"><SvIcon.Thumb /></span>;
-  if (k === 'love') return <span className="sv-r-circle love"><SvIcon.Heart /></span>;
-  return <FbEmoji char={emojiOf(k)} size={40} />;
-}
 
 const STORY_MS = 5000;
 
@@ -503,7 +481,14 @@ function Viewer({ groups, start, meId, seen, onSeen, onClose, onDelete, onReact,
 
             {summary.length > 0 && (
               <div className="story-summary">
-                {summary.map((k) => <span key={k}><FbEmoji char={emojiOf(k)} size={18} /></span>)} {story.reactions_count}
+                <span className="ss-stack">
+                  {summary.map((k) => (
+                    <span key={k} title={reactionOf(k)?.label}>
+                      <ReactionIcon type={k} size={20} />
+                    </span>
+                  ))}
+                </span>
+                {story.reactions_count}
               </div>
             )}
 
@@ -547,7 +532,7 @@ function Viewer({ groups, start, meId, seen, onSeen, onClose, onDelete, onReact,
                     className={story.my_reaction === r.key ? 'on' : ''}
                     onClick={() => onReact(story.id, r.key)}
                   >
-                    <ReactIcon k={r.key} />
+                    <ReactionIcon type={r.key} size={40} />
                   </button>
                 ))}
               </div>
