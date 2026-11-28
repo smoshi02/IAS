@@ -8,6 +8,7 @@ use App\Models\Friendship;
 use App\Models\Like;
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
@@ -28,15 +29,36 @@ class PostController extends Controller
             ->withCount(['comments', 'shares']);
     }
 
+    /** Every photo/video on a post as [{url, type}], oldest posts (single media_path) included. */
+    private function mediaList(Post $p): array
+    {
+        $items = is_array($p->media_paths) ? $p->media_paths : [];
+
+        if (count($items)) {
+            return array_values(array_map(fn ($i) => [
+                'url'  => asset('storage/' . $i['path']),
+                'type' => $i['type'] ?? 'image',
+            ], $items));
+        }
+
+        if ($p->media_path) {
+            return [['url' => asset('storage/' . $p->media_path), 'type' => $p->media_type ?: 'image']];
+        }
+
+        return [];
+    }
+
     private function fmt(Post $p, $uid, bool $nested = true): array
     {
         $likes = $p->relationLoaded('likes') ? $p->likes : collect();
+        $media = $this->mediaList($p);
 
         return [
             'id'             => $p->id,
             'body'           => $p->body,
-            'media_url'      => $p->media_path ? asset('storage/' . $p->media_path) : null,
-            'media_type'     => $p->media_type,
+            'media'          => $media,
+            'media_url'      => $media[0]['url'] ?? null,   // first item, kept for older screens
+            'media_type'     => $media[0]['type'] ?? null,
             'created_at'     => $p->created_at->toIso8601String(),
             'user'           => ['id' => $p->user->id, 'name' => $this->fullName($p->user), 'avatar' => $p->user->avatar_url],
             'likes_count'    => $likes->count(),
@@ -117,24 +139,37 @@ class PostController extends Controller
 
     public function store(Request $r)
     {
-        $r->validate([
-            'body'  => 'nullable|string|max:2000',
-            'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov|max:51200',
-        ]);
-        abort_if(!$r->filled('body') && !$r->hasFile('media'), 422, 'Write something or attach a photo/video.');
-
-        $path = $type = null;
-        if ($r->hasFile('media')) {
-            $f = $r->file('media');
-            $path = $f->store('posts', 'public');
-            $type = str_starts_with($f->getMimeType(), 'video') ? 'video' : 'image';
+        // accept a single `media` file too, not just media[]
+        if ($r->hasFile('media') && !is_array($r->file('media'))) {
+            $r->files->set('media', [$r->file('media')]);
         }
 
+        $r->validate([
+            'body'    => 'nullable|string|max:2000',
+            'media'   => 'nullable|array|max:20',
+            'media.*' => 'file|mimes:jpg,jpeg,png,webp,gif,mp4,webm,mov|max:51200',
+        ]);
+
+        $files = array_values(array_filter(Arr::wrap($r->file('media'))));
+        abort_if(!$r->filled('body') && count($files) === 0, 422, 'Write something or attach a photo/video.');
+
+        $items = [];
+        foreach ($files as $f) {
+            $items[] = [
+                'path' => $f->store('posts', 'public'),
+                'type' => str_starts_with($f->getMimeType(), 'video') ? 'video' : 'image',
+            ];
+        }
+
+        // cover = first photo if there is one, otherwise the first item
+        $cover = collect($items)->firstWhere('type', 'image') ?? ($items[0] ?? null);
+
         $post = Post::create([
-            'user_id'    => $r->user()->id,
-            'body'       => $r->input('body'),
-            'media_path' => $path,
-            'media_type' => $type,
+            'user_id'     => $r->user()->id,
+            'body'        => $r->input('body'),
+            'media_path'  => $cover['path'] ?? null,
+            'media_type'  => $cover['type'] ?? null,
+            'media_paths' => count($items) ? $items : null,
         ]);
 
         return response()->json($this->fmt($this->query()->findOrFail($post->id), $r->user()->id), 201);
@@ -143,9 +178,15 @@ class PostController extends Controller
     public function destroy(Request $r, Post $post)
     {
         abort_if($post->user_id !== $r->user()->id, 403);
+
+        $paths = collect(is_array($post->media_paths) ? $post->media_paths : [])->pluck('path');
         if ($post->media_path) {
-            Storage::disk('public')->delete($post->media_path);
+            $paths->push($post->media_path);
         }
+        foreach ($paths->unique() as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
         $post->delete();
         return response()->noContent();
     }

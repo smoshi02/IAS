@@ -7,6 +7,8 @@ import SimAd from '../components/SimAd';
 import Stories from '../components/Stories';
 import ReactionIcon from '../components/ReactionIcons';
 import PostMenu from '../components/PostMenu';
+import PostMedia, { makeItems, revokeItems, MAX_FILES } from '../components/PostMedia';
+import CreatePostModal from '../components/CreatePostModal';
 import OtherPostMenu, { HiddenPost } from '../components/OtherPostMenu';
 import TopNav from '../components/TopNav';
 import * as Art from '../components/SideIcons';
@@ -93,13 +95,6 @@ function AdToast({ onOpen }) {
   );
 }
 
-function PostMedia({ post }) {
-  if (!post.media_url) return null;
-  return post.media_type === 'video'
-    ? <video className="post-media" src={post.media_url} controls />
-    : <img className="post-media" src={post.media_url} alt="Post" />;
-}
-
 const REACTIONS = [
   { key: 'like',  label: 'Like',  color: '#1877f2' },
   { key: 'love',  label: 'Love',  color: '#f33e58' },
@@ -173,8 +168,8 @@ export default function Home() {
   const [commentsMap, setCommentsMap] = useState({});
   const [commentDraft, setCommentDraft] = useState({});
   const [composerText, setComposerText] = useState('');
-  const [composerFile, setComposerFile] = useState(null);
-  const [composerPreview, setComposerPreview] = useState(null);
+  const [composerItems, setComposerItems] = useState([]); // [{ file, url, isVideo }]
+  const [composerOpen, setComposerOpen] = useState(false);
   const chats = useChats();
   const [openChats, setOpenChats] = useState(loc.state && loc.state.openChat ? [loc.state.openChat] : []);
   const suppressUntil = useRef(0);
@@ -327,27 +322,33 @@ export default function Home() {
       setDeleting(false);
     }
   };
-  const clearFile = () => {
-    if (composerPreview) URL.revokeObjectURL(composerPreview);
-    setComposerFile(null);
-    setComposerPreview(null);
+  const clearFiles = () => {
+    revokeItems(composerItems);
+    setComposerItems([]);
+  };
+
+  const removeFile = (i) => {
+    const gone = composerItems[i];
+    if (gone) URL.revokeObjectURL(gone.url);
+    setComposerItems((prev) => prev.filter((_, k) => k !== i));
   };
 
   const submitNewPost = async (e) => {
     e.preventDefault();
     const text = composerText.trim();
-    if ((!text && !composerFile) || posting) return;
+    if ((!text && composerItems.length === 0) || posting) return;
     setPosting(true);
     setPostError('');
     holdSync();
     const fd = new FormData();
     if (text) fd.append('body', text);
-    if (composerFile) fd.append('media', composerFile);
+    composerItems.forEach((it) => fd.append('media[]', it.file));
     try {
       const { data } = await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setPosts((prev) => [data, ...prev]);
       setComposerText('');
-      clearFile();
+      clearFiles();
+      setComposerOpen(false);
     } catch (err) {
       setPostError(err.response?.data?.message || 'Could not post. Check the file size/type.');
     } finally {
@@ -356,13 +357,13 @@ export default function Home() {
   };
 
   const pickFile = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (file) {
-      if (composerPreview) URL.revokeObjectURL(composerPreview);
-      setComposerFile(file);
-      setComposerPreview(URL.createObjectURL(file));
-    }
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
+    if (!files.length) return;
+    const room = MAX_FILES - composerItems.length;
+    setPostError(files.length > room ? `You can attach up to ${MAX_FILES} photos/videos per post.` : '');
+    const add = makeItems(files.slice(0, Math.max(0, room)));
+    setComposerItems((prev) => [...prev, ...add]);
   };
 
   const openPicker = (accept) => {
@@ -371,9 +372,10 @@ export default function Home() {
     fileRef.current.click();
   };
 
-  const insertSymbol = (symbol) => {
-    setComposerText((t) => `${t}${t && !t.endsWith(' ') ? ' ' : ''}${symbol}`);
-    if (composerRef.current) composerRef.current.focus();
+  // the bar on the feed only launches the pop-up; photo/video buttons also open the file picker
+  const openComposer = (accept) => {
+    setComposerOpen(true);
+    if (accept) openPicker(accept);
   };
 
   // open a chat window (max 2 docked at once)
@@ -438,31 +440,33 @@ export default function Home() {
           )}
 
           {section === 'feed' && (
-            <form className="create-post" onSubmit={submitNewPost}>
+            <div className="create-post">
               <div className="composer-row">
                 <img className="avatar" src={avatarOf(user)} alt={userFullName} />
                 <input
                   ref={composerRef}
+                  readOnly
+                  style={{ cursor: 'pointer' }}
                   placeholder={`What's on your mind, ${user?.first_name || ''}?`}
                   value={composerText}
-                  onChange={(e) => setComposerText(e.target.value)}
+                  onClick={() => openComposer()}
                 />
                 <div className="composer-tools">
-                  <button type="button" title="Add video" onClick={() => openPicker('video/*')}>
+                  <button type="button" title="Add video" onClick={() => openComposer('video/*')}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path fill="#f3425f" d="M4.5 5.5h9A2.5 2.5 0 0 1 16 8v8a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 2 16V8a2.5 2.5 0 0 1 2.5-2.5Zm12.8 4.2 4-2.3a.6.6 0 0 1 .9.5v8.2a.6.6 0 0 1-.9.5l-4-2.3Z" />
                       <circle cx="9" cy="12" r="2.6" fill="#fff" />
                       <circle cx="9" cy="12" r="1.1" fill="#f3425f" />
                     </svg>
                   </button>
-                  <button type="button" title="Add photo" onClick={() => openPicker('image/*')}>
+                  <button type="button" title="Add photo" onClick={() => openComposer('image/*')}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="#45bd62" />
                       <circle cx="8.5" cy="9" r="1.9" fill="#fff" />
                       <path fill="#fff" d="m4.5 18 5-5.2a1 1 0 0 1 1.4 0l1.6 1.6 3.1-3.6a1 1 0 0 1 1.5 0L20 15.2V18Z" />
                     </svg>
                   </button>
-                  <button type="button" title="Add emoji" onClick={() => insertSymbol('😊')}>
+                  <button type="button" title="Add emoji" onClick={() => openComposer()}>
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <circle cx="12" cy="12" r="9" fill="none" stroke="#f7721e" strokeWidth="2.2" />
                       <circle cx="8.8" cy="10" r="1.3" fill="#f7721e" />
@@ -471,23 +475,25 @@ export default function Home() {
                     </svg>
                   </button>
                 </div>
-                {(composerText.trim() || composerFile) && (
-                  <button type="submit" className="post-btn" disabled={posting}>
-                    {posting ? 'Posting…' : 'Post'}
-                  </button>
-                )}
               </div>
-              <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
-              {composerPreview && (
-                <div className="composer-preview">
-                  {composerFile && composerFile.type.startsWith('video')
-                    ? <video src={composerPreview} controls />
-                    : <img src={composerPreview} alt="Selected" />}
-                  <button type="button" onClick={clearFile}>Remove</button>
-                </div>
-              )}
-              {postError && <div className="post-error">{postError}</div>}
-            </form>
+              <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
+            </div>
+          )}
+
+          {composerOpen && (
+            <CreatePostModal
+              user={user}
+              text={composerText}
+              onText={setComposerText}
+              items={composerItems}
+              onRemove={removeFile}
+              onClear={clearFiles}
+              onPick={() => openPicker('image/*,video/*')}
+              posting={posting}
+              error={postError}
+              onSubmit={submitNewPost}
+              onClose={() => setComposerOpen(false)}
+            />
           )}
 
           {section === 'feed' && <Stories />}
@@ -517,7 +523,7 @@ export default function Home() {
                 )}
               </div>
               {post.body && <p className="post-text">{post.body}</p>}
-              <PostMedia post={post} />
+              <PostMedia post={post} onChange={(patch) => updatePost(post.id, patch)} />
               {post.shared && (
                 <div className="shared-post">
                   <div className="post-header">

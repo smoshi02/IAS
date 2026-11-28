@@ -3,32 +3,9 @@ import api from '../../api/axios';
 
 const initials = (u) => `${u.first_name?.[0] || ''}${u.last_name?.[0] || ''}`.toUpperCase() || '?';
 
-// Shows the email, or the phone number when the user signed up with one.
-// If a user has both, the phone number appears underneath.
-function ContactCell({ user }) {
-  const primary = user.email || user.mobile_number;
-  if (!primary) return <span className="muted">—</span>;
-  const secondary = user.email && user.mobile_number ? user.mobile_number : null;
-  return (
-    <div className="contact-cell">
-      <div className="contact-line">
-        <span className="contact-kind">{user.email ? 'Email' : 'Phone'}</span>
-        <span className="contact-main" title={primary}>{primary}</span>
-      </div>
-      {secondary && (
-        <div className="contact-line">
-          <span className="contact-kind">Phone</span>
-          <span className="contact-sub">{secondary}</span>
-        </div>
-      )}
-    </div>
-  );
-}
+const dash = <span className="muted">—</span>;
 
-function PasswordCell({ value }) {
-  if (!value) return <span className="muted">—</span>;
-  return <code className="hash-cell" title={value}>{value}</code>;
-}
+const formatGender = (g) => (g ? g.charAt(0).toUpperCase() + g.slice(1).toLowerCase() : null);
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
@@ -160,12 +137,12 @@ export default function UserManagement() {
           <table className="data-table">
             <thead>
               <tr>
-                <th className="col-id">ID</th>
-                <th>User</th>
-                <th>Email / Phone Number</th>
-                <th>Account</th>
-                <th>Password</th>
-                <th>Registered</th>
+                <th>Full Name</th>
+                <th>Contact Number</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Gender</th>
+                <th>Job Title</th>
                 <th>Status</th>
                 <th className="col-actions">Actions</th>
               </tr>
@@ -173,20 +150,17 @@ export default function UserManagement() {
             <tbody className={loading ? 'is-loading' : ''}>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <td className="col-id muted">{u.id}</td>
                   <td>
                     <div className="user-cell">
                       <span className="user-avatar">{initials(u)}</span>
-                      <div>
-                        <div className="user-name">{u.first_name} {u.last_name}</div>
-                        <div className="user-handle">@{u.username}</div>
-                      </div>
+                      <div className="user-name">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || dash}</div>
                     </div>
                   </td>
-                  <td><ContactCell user={u} /></td>
-                  <td><span className={`badge type-${(u.account_type || 'regular').toLowerCase()}`}>{u.account_type === 'DUMMY' ? 'Dummy' : 'Regular'}</span></td>
-                  <td><PasswordCell value={u.password} /></td>
-                  <td className="nowrap">{new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                  <td className="nowrap">{u.mobile_number || dash}</td>
+                  <td>{u.email || dash}</td>
+                  <td style={{ minWidth: 180, maxWidth: 260 }}>{u.address || dash}</td>
+                  <td>{formatGender(u.gender) || dash}</td>
+                  <td>{u.job_title || dash}</td>
                   <td><span className={`badge with-dot ${u.status.toLowerCase()}`}>{u.status === 'ACTIVE' ? 'Active' : 'Inactive'}</span></td>
                   <td className="col-actions">
                     <div className="row-actions">

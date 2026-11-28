@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import TopNav, { Hl } from '../components/TopNav';
+import PostMedia, { mediaOf } from '../components/PostMedia';
 import useNotifications from '../hooks/useNotifications';
 import useChats from '../hooks/useChats';
 import { avatarOf, timeAgo } from '../utils/people';
@@ -110,14 +111,12 @@ function PostResult({ post, q }) {
         </div>
       </div>
       {post.body && <p className="pf-post-body"><Hl text={post.body} q={q} /></p>}
-      {post.media_url && (post.media_type === 'video'
-        ? <video className="pf-post-media" src={post.media_url} controls />
-        : <img className="pf-post-media" src={post.media_url} alt="Post" />)}
+      <PostMedia post={post} bleed />
       {post.shared && (
         <div className="pf-shared">
           <b>{post.shared.user.name}</b>
           {post.shared.body && <p><Hl text={post.shared.body} q={q} /></p>}
-          {post.shared.media_url && post.shared.media_type !== 'video' && <img src={post.shared.media_url} alt="" />}
+          <PostMedia post={post.shared} />
         </div>
       )}
       <div className="pf-post-stats">
@@ -212,14 +211,16 @@ export default function SearchResults() {
   const postsBlock = (type === 'photos' || type === 'videos') ? (
     posts.length > 0 && (
       <div className="pf-card sr-grid">
-        {posts.map((p) => (
-          <div key={p.id} className="sr-tile">
-            {type === 'photos'
-              ? <a href={p.media_url} target="_blank" rel="noreferrer"><img src={p.media_url} alt="" /></a>
-              : <video src={p.media_url} controls />}
-            <small>{p.user.name}</small>
-          </div>
-        ))}
+        {posts.flatMap((p) => mediaOf(p)
+          .filter((m) => m.type === (type === 'photos' ? 'image' : 'video'))
+          .map((m, i) => (
+            <div key={`${p.id}-${i}`} className="sr-tile">
+              {type === 'photos'
+                ? <a href={m.url} target="_blank" rel="noreferrer"><img src={m.url} alt="" /></a>
+                : <video src={m.url} controls />}
+              <small>{p.user.name}</small>
+            </div>
+          )))}
       </div>
     )
   ) : posts.map((p) => <PostResult key={p.id} post={p} q={q} />);

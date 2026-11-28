@@ -7,7 +7,11 @@ use App\Models\AdminActivityLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class UserManagementController extends Controller
@@ -38,27 +42,69 @@ class UserManagementController extends Controller
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Users');
+        $sheet->setShowGridlines(false);
 
+        // Title banner
+        $sheet->mergeCells('A1:F1');
+        $sheet->setCellValue('A1', 'Phishbook Users');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1877F2']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(32);
+
+        $sheet->mergeCells('A2:F2');
+        $sheet->setCellValue('A2', 'Exported on ' . now()->format('F j, Y g:i A') . '  •  ' . $users->count() . ' user(s)');
+        $sheet->getStyle('A2')->applyFromArray([
+            'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '65676B']],
+            'alignment' => ['indent' => 1],
+        ]);
+
+        // Header row
         $headers = ['Full Name', 'Contact Number', 'Email', 'Address', 'Gender', 'Job Title'];
-        $sheet->fromArray($headers, null, 'A1');
-        $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+        $sheet->fromArray($headers, null, 'A3');
+        $sheet->getStyle('A3:F3')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1C1E21']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+        ]);
+        $sheet->getRowDimension(3)->setRowHeight(24);
 
-        $row = 2;
+        // Data rows
+        $row = 4;
         foreach ($users as $user) {
-            $sheet->fromArray([
-                trim("{$user->first_name} {$user->last_name}"),
-                $user->mobile_number,
-                $user->email,
-                $user->address,
-                $user->gender,
-                $user->job_title,
-            ], null, "A{$row}");
+            $sheet->setCellValue("A{$row}", trim("{$user->first_name} {$user->last_name}") ?: '—');
+            // Explicit string so numbers like 0917... keep the leading zero
+            $sheet->setCellValueExplicit("B{$row}", $user->mobile_number ?: '—', DataType::TYPE_STRING);
+            $sheet->setCellValue("C{$row}", $user->email ?: '—');
+            $sheet->setCellValue("D{$row}", $user->address ?: '—');
+            $sheet->setCellValue("E{$row}", $user->gender ? ucfirst(strtolower($user->gender)) : '—');
+            $sheet->setCellValue("F{$row}", $user->job_title ?: '—');
+
+            // Zebra striping
+            if ($row % 2 === 1) {
+                $sheet->getStyle("A{$row}:F{$row}")->getFill()
+                    ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F0F2F5');
+            }
             $row++;
         }
 
-        foreach (range('A', 'F') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        $last = max($row - 1, 3);
+
+        // Borders, alignment, widths
+        $sheet->getStyle("A3:F{$last}")->applyFromArray([
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CED0D4']]],
+        ]);
+        $sheet->getStyle("A4:F{$last}")->getAlignment()
+            ->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+
+        foreach (['A' => 26, 'B' => 18, 'C' => 32, 'D' => 38, 'E' => 12, 'F' => 24] as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
         }
+
+        $sheet->freezePane('A4');
+        $sheet->setAutoFilter("A3:F{$last}");
 
         $filename = 'phishbook_users_' . now()->format('Ymd_His') . '.xlsx';
         $writer = new Xlsx($spreadsheet);

@@ -71,13 +71,24 @@ class ProfileController extends Controller
             }
         }
 
+        // every photo from the user's recent posts (a post can hold several)
         $photos = Post::where('user_id', $uid)
             ->where('media_type', 'image')
             ->whereNotNull('media_path')
             ->latest()
             ->limit(12)
-            ->get(['id', 'media_path'])
-            ->map(fn ($p) => ['id' => (int) $p->id, 'url' => asset('storage/' . $p->media_path)])
+            ->get(['id', 'media_path', 'media_paths'])
+            ->flatMap(function ($p) {
+                $items = is_array($p->media_paths) && count($p->media_paths)
+                    ? $p->media_paths
+                    : [['path' => $p->media_path, 'type' => 'image']];
+
+                return collect($items)
+                    ->filter(fn ($i) => ($i['type'] ?? 'image') === 'image')
+                    ->values()
+                    ->map(fn ($i, $n) => ['id' => $p->id . '-' . $n, 'url' => asset('storage/' . $i['path'])]);
+            })
+            ->take(12)
             ->values();
 
         return [

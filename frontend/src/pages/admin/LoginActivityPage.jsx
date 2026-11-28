@@ -37,13 +37,14 @@ export default function LoginActivityPage() {
     return () => clearInterval(id);
   }, [load]);
 
-  const exportCsv = () => {
+  const exportExcel = () => {
     const params = new URLSearchParams();
+    if (search) params.set('search', search);
     if (status) params.set('status', status);
     if (date) params.set('date', date);
     const token = localStorage.getItem('phishbook_token');
     const base = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
-    fetch(`${base}/admin/login-activities/export-csv?${params.toString()}`, {
+    fetch(`${base}/admin/login-activities/export-excel?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
@@ -54,11 +55,11 @@ export default function LoginActivityPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'login_activities.csv';
+        a.download = 'login_activities.xlsx';
         a.click();
         window.URL.revokeObjectURL(url);
       })
-      .catch(() => setError('Could not export the CSV. Check that the API is running.'));
+      .catch(() => setError('Could not export the Excel file. Check that the API is running.'));
   };
 
   return (
@@ -71,7 +72,7 @@ export default function LoginActivityPage() {
           {statuses.map((s) => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}
         </select>
         <input type="date" value={date} onChange={(e) => { setPage(1); setDate(e.target.value); }} />
-        <button onClick={exportCsv}>Export CSV</button>
+        <button onClick={exportExcel}>Export Excel</button>
       </div>
 
       {error && <div className="auth-error" style={{ marginTop: 16 }}>{error}</div>}

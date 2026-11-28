@@ -6,7 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
-    protected $fillable = ['user_id', 'body', 'media_path', 'media_type', 'shared_post_id'];
+    protected $fillable = ['user_id', 'body', 'media_path', 'media_type', 'media_paths', 'shared_post_id'];
+
+    protected $casts = ['media_paths' => 'array'];
 
     public function user()       { return $this->belongsTo(User::class); }
     public function likes()      { return $this->hasMany(Like::class); }

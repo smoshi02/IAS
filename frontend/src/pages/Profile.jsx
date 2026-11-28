@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import TopNav from '../components/TopNav';
+import PostMedia, { makeItems, revokeItems, MAX_FILES } from '../components/PostMedia';
+import CreatePostModal from '../components/CreatePostModal';
 import useNotifications from '../hooks/useNotifications';
 import useChats from '../hooks/useChats';
 import { avatarOf, timeAgo } from '../utils/people';
@@ -101,7 +103,7 @@ function PhotoModal({ file, kind, busy, error, onCancel, onSave }) {
   );
 }
 
-function ProfilePost({ post }) {
+function ProfilePost({ post, onChange }) {
   return (
     <div className="pf-card pf-post">
       <div className="pf-post-head">
@@ -112,14 +114,12 @@ function ProfilePost({ post }) {
         </div>
       </div>
       {post.body && <p className="pf-post-body">{post.body}</p>}
-      {post.media_url && (post.media_type === 'video'
-        ? <video className="pf-post-media" src={post.media_url} controls />
-        : <img className="pf-post-media" src={post.media_url} alt="Post" />)}
+      <PostMedia post={post} bleed onChange={onChange} />
       {post.shared && (
         <div className="pf-shared">
           <b>{post.shared.user.name}</b>
           {post.shared.body && <p>{post.shared.body}</p>}
-          {post.shared.media_url && post.shared.media_type !== 'video' && <img src={post.shared.media_url} alt="" />}
+          <PostMedia post={post.shared} />
         </div>
       )}
       <div className="pf-post-stats">
@@ -243,8 +243,11 @@ export default function Profile() {
     const q = {};
     if (t && t !== 'all') q.tab = t;
     if (s && s !== 'intro') q.section = s;
+    // only jump to the top when switching tabs; moving between About
+    // sections keeps the scroll position where it is
+    const tabChanged = (t || 'all') !== tab;
     setSp(q);
-    window.scrollTo({ top: 0 });
+    if (tabChanged) window.scrollTo({ top: 0 });
   };
 
   const [data, setData] = useState(null);
@@ -263,7 +266,8 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [unfriendAsk, setUnfriendAsk] = useState(false);
   const [composer, setComposer] = useState('');
-  const [cFile, setCFile] = useState(null);
+  const [cItems, setCItems] = useState([]); // [{ file, url, isVideo }]
+  const [cpOpen, setCpOpen] = useState(false);
   const [posting, setPosting] = useState(false);
   const [postErr, setPostErr] = useState('');
   const [navQuery, setNavQuery] = useState('');
@@ -387,15 +391,15 @@ export default function Profile() {
   const submitPost = async (e) => {
     e.preventDefault();
     const text = composer.trim();
-    if ((!text && !cFile) || posting) return;
+    if ((!text && cItems.length === 0) || posting) return;
     setPosting(true); setPostErr('');
     const fd = new FormData();
     if (text) fd.append('body', text);
-    if (cFile) fd.append('media', cFile);
+    cItems.forEach((it) => fd.append('media[]', it.file));
     try {
       const res = await api.post('/posts', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       setPosts((prev) => [res.data, ...prev]);
-      setComposer(''); setCFile(null);
+      setComposer(''); revokeItems(cItems); setCItems([]); setCpOpen(false);
       loadProfile();
     } catch (er) {
       setPostErr(er.response?.data?.message || 'Could not post. Check the file size/type.');
@@ -409,8 +413,27 @@ export default function Profile() {
   };
   const startLifeUpdate = () => {
     setComposer((t) => t || 'Life update: ');
-    if (composerInput.current) composerInput.current.focus();
+    setCpOpen(true);
   };
+  const openComposerWith = (accept) => {
+    setCpOpen(true);
+    if (accept) openPicker(accept);
+  };
+  const pickProfileFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    const room = MAX_FILES - cItems.length;
+    setPostErr(files.length > room ? `You can attach up to ${MAX_FILES} photos/videos per post.` : '');
+    const add = makeItems(files.slice(0, Math.max(0, room)));
+    setCItems((prev) => [...prev, ...add]);
+  };
+  const removeProfileFile = (i) => {
+    const gone = cItems[i];
+    if (gone) URL.revokeObjectURL(gone.url);
+    setCItems((prev) => prev.filter((_, k) => k !== i));
+  };
+  const clearProfileFiles = () => { revokeItems(cItems); setCItems([]); };
 
   const topBar = (
     <div className="home-page nav-only">
@@ -576,24 +599,27 @@ export default function Profile() {
 
       <section className="pr-right">
         {isMe && (
-          <form className="pf-card pf-composer" onSubmit={submitPost}>
+          <div className="pf-card pf-composer">
             <div className="pf-composer-row">
               <img src={avatarOf(user, 80)} alt="" />
-              <input ref={composerInput} placeholder="What's on your mind?" value={composer} onChange={(e) => setComposer(e.target.value)} />
+              <input
+                ref={composerInput}
+                readOnly
+                style={{ cursor: 'pointer' }}
+                placeholder="What's on your mind?"
+                value={composer}
+                onClick={() => setCpOpen(true)}
+              />
             </div>
-            {cFile && (
-              <div className="pf-attach">{cFile.name}<button type="button" onClick={() => setCFile(null)}>Remove</button></div>
-            )}
-            {postErr && <div className="post-error">{postErr}</div>}
             <div className="pf-composer-foot">
-              <button type="button" className="pf-act" onClick={() => openPicker('video/*')}>
+              <button type="button" className="pf-act" onClick={() => openComposerWith('video/*')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path fill="#f3425f" d="M4.5 5.5h9A2.5 2.5 0 0 1 16 8v8a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 2 16V8a2.5 2.5 0 0 1 2.5-2.5Zm12.8 4.2 4-2.3a.6.6 0 0 1 .9.5v8.2a.6.6 0 0 1-.9.5l-4-2.3Z" />
                   <circle cx="9" cy="12" r="2.6" fill="#fff" /><circle cx="9" cy="12" r="1.1" fill="#f3425f" />
                 </svg>
                 Live video
               </button>
-              <button type="button" className="pf-act" onClick={() => openPicker('image/*,video/*')}>
+              <button type="button" className="pf-act" onClick={() => openComposerWith('image/*,video/*')}>
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="2.5" y="3.5" width="19" height="17" rx="3" fill="#45bd62" />
                   <circle cx="8.5" cy="9" r="1.9" fill="#fff" />
@@ -608,15 +634,24 @@ export default function Profile() {
                 </svg>
                 Life update
               </button>
-              <input
-                ref={postInput} type="file" accept="image/*,video/*" hidden
-                onChange={(e) => { const fl = e.target.files && e.target.files[0]; e.target.value = ''; if (fl) setCFile(fl); }}
-              />
+              <input ref={postInput} type="file" accept="image/*,video/*" multiple hidden onChange={pickProfileFiles} />
             </div>
-            {(composer.trim() || cFile) && (
-              <button type="submit" className="fb-btn primary pf-post-submit" disabled={posting}>{posting ? 'Posting…' : 'Post'}</button>
+            {cpOpen && (
+              <CreatePostModal
+                user={user}
+                text={composer}
+                onText={setComposer}
+                items={cItems}
+                onRemove={removeProfileFile}
+                onClear={clearProfileFiles}
+                onPick={() => openPicker('image/*,video/*')}
+                posting={posting}
+                error={postErr}
+                onSubmit={submitPost}
+                onClose={() => setCpOpen(false)}
+              />
             )}
-          </form>
+          </div>
         )}
 
         <div className="pf-card pr-posts-head">
@@ -634,7 +669,13 @@ export default function Profile() {
         </div>
 
         {posts.length === 0 && <div className="pf-card pf-muted center">No posts to show.</div>}
-        {view === 'list' && posts.map((post) => <ProfilePost key={post.id} post={post} />)}
+        {view === 'list' && posts.map((post) => (
+          <ProfilePost
+            key={post.id}
+            post={post}
+            onChange={(patch) => setPosts((prev) => prev.map((x) => (x.id === post.id ? { ...x, ...patch } : x)))}
+          />
+        ))}
         {view === 'grid' && posts.length > 0 && (
           <div className="pf-card pr-postgrid">
             {posts.map((post) => (
@@ -642,6 +683,7 @@ export default function Profile() {
                 {post.media_url && post.media_type !== 'video' && <img src={post.media_url} alt="" />}
                 {post.media_url && post.media_type === 'video' && <video src={post.media_url} muted />}
                 {!post.media_url && <p>{post.body}</p>}
+                {post.media && post.media.length > 1 && <span className="pm-badge">{post.media.length}</span>}
               </div>
             ))}
           </div>

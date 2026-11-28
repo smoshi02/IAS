@@ -43,7 +43,7 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function ()
     Route::delete('/users/{user}', [UserManagementController::class, 'destroy']);
 
     Route::get('/login-activities', [LoginActivityController::class, 'index']);
-    Route::get('/login-activities/export-csv', [LoginActivityController::class, 'exportCsv']);
+    Route::get('/login-activities/export-excel', [LoginActivityController::class, 'exportExcel']);
 
     Route::get('/dummy-accounts', [DummyAccountController::class, 'index']);
     Route::post('/dummy-accounts', [DummyAccountController::class, 'store']);
